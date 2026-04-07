@@ -2,14 +2,19 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { getBrowserClient } from "@/lib/supabase-browser";
-import { GameState, Player } from "@/lib/types";
+import { GameState, Player, VcType } from "@/lib/types";
 import { Lobby } from "@/components/lobby";
+import { VcSelect } from "@/components/vc-select";
+import { Negotiation } from "@/components/negotiation";
+import { Leaderboard } from "@/components/leaderboard";
 
 export default function Home() {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [playerName, setPlayerName] = useState<string | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [player, setPlayer] = useState<Player | null>(null);
+  const [screen, setScreen] = useState<"main" | "negotiation" | "leaderboard">("main");
+  const [activeVc, setActiveVc] = useState<VcType | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("boss-fight-player");
@@ -139,23 +144,45 @@ export default function Home() {
   }
 
   if (gameState.status === "playing") {
+    if (screen === "leaderboard") {
+      return (
+        <Leaderboard
+          teamNumber={player?.team_number ?? null}
+          onBack={() => setScreen("main")}
+        />
+      );
+    }
+
+    if (screen === "negotiation" && activeVc) {
+      return (
+        <Negotiation
+          playerId={playerId}
+          vcType={activeVc}
+          teamNumber={player?.team_number ?? 0}
+          onBack={() => {
+            setScreen("main");
+            setActiveVc(null);
+          }}
+          onDealClosed={() => {}}
+        />
+      );
+    }
+
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-6">
-        <h1 className="text-2xl font-bold mb-4">Game On!</h1>
-        <p className="text-zinc-500">
-          Team {player?.team_number} — {playerName}
-        </p>
-        <p className="text-zinc-600 text-sm mt-2">VC Select coming next...</p>
-      </div>
+      <VcSelect
+        teamNumber={player?.team_number ?? 0}
+        onSelect={(vc) => {
+          setActiveVc(vc);
+          setScreen("negotiation");
+        }}
+        onLeaderboard={() => setScreen("leaderboard")}
+      />
     );
   }
 
   if (gameState.status === "finished") {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-6">
-        <h1 className="text-2xl font-bold mb-4">🏆 Game Over!</h1>
-        <p className="text-zinc-500">Leaderboard coming next...</p>
-      </div>
+      <Leaderboard teamNumber={player?.team_number ?? null} />
     );
   }
 
