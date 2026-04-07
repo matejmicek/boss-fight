@@ -1,65 +1,163 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { getBrowserClient } from "@/lib/supabase-browser";
+import { GameState, Player } from "@/lib/types";
+import { Lobby } from "@/components/lobby";
 
 export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+  const [playerId, setPlayerId] = useState<string | null>(null);
+  const [playerName, setPlayerName] = useState<string | null>(null);
+  const [gameState, setGameState] = useState<GameState | null>(null);
+  const [player, setPlayer] = useState<Player | null>(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("boss-fight-player");
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      setPlayerId(parsed.id);
+      setPlayerName(parsed.name);
+    }
+  }, []);
+
+  useEffect(() => {
+    const supabase = getBrowserClient();
+
+    supabase
+      .from("game_state")
+      .select("*")
+      .eq("id", 1)
+      .single()
+      .then(({ data }) => {
+        if (data) setGameState(data as GameState);
+      });
+
+    const channel = supabase
+      .channel("game-state")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "game_state" },
+        (payload) => {
+          setGameState(payload.new as GameState);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchPlayer = useCallback(async () => {
+    if (!playerId) return;
+    const supabase = getBrowserClient();
+    const { data } = await supabase
+      .from("players")
+      .select("*")
+      .eq("id", playerId)
+      .single();
+    if (data) setPlayer(data as Player);
+  }, [playerId]);
+
+  useEffect(() => {
+    fetchPlayer();
+  }, [fetchPlayer]);
+
+  useEffect(() => {
+    if (!playerId) return;
+    const supabase = getBrowserClient();
+
+    const channel = supabase
+      .channel("player-updates")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "players",
+          filter: `id=eq.${playerId}`,
+        },
+        (payload) => {
+          setPlayer(payload.new as Player);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [playerId]);
+
+  function handleJoin(id: string, name: string) {
+    setPlayerId(id);
+    setPlayerName(name);
+    localStorage.setItem("boss-fight-player", JSON.stringify({ id, name }));
+  }
+
+  if (!playerId) {
+    return <Lobby onJoin={handleJoin} />;
+  }
+
+  if (!gameState) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-zinc-500">Loading...</p>
+      </div>
+    );
+  }
+
+  if (gameState.status === "lobby") {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-6">
+        <div className="text-5xl mb-4">⚔️</div>
+        <h1 className="text-2xl font-bold mb-2">You're in, {playerName}!</h1>
+        <p className="text-zinc-500">Waiting for host to assign teams...</p>
+        <a
+          href="/deck.pdf"
+          target="_blank"
+          className="mt-6 text-zinc-500 hover:text-white transition-colors text-sm"
+        >
+          📄 Study the Startup Deck
+        </a>
+      </div>
+    );
+  }
+
+  if (gameState.status === "teams") {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-6">
+        <p className="text-zinc-500 text-sm mb-2">You are</p>
+        <div className="text-7xl font-bold text-green-400 mb-4">
+          Team {player?.team_number ?? "..."}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+        <p className="text-zinc-500">Find your teammates!</p>
+        <p className="text-zinc-600 text-sm mt-4">
+          Waiting for host to start the game...
+        </p>
+      </div>
+    );
+  }
+
+  if (gameState.status === "playing") {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-6">
+        <h1 className="text-2xl font-bold mb-4">Game On!</h1>
+        <p className="text-zinc-500">
+          Team {player?.team_number} — {playerName}
+        </p>
+        <p className="text-zinc-600 text-sm mt-2">VC Select coming next...</p>
+      </div>
+    );
+  }
+
+  if (gameState.status === "finished") {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-6">
+        <h1 className="text-2xl font-bold mb-4">🏆 Game Over!</h1>
+        <p className="text-zinc-500">Leaderboard coming next...</p>
+      </div>
+    );
+  }
+
+  return null;
 }
