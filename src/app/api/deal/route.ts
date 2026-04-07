@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { generateText, Output } from "ai";
+import { anthropic } from "@ai-sdk/anthropic";
 import { z } from "zod";
 import { createServerClient } from "@/lib/supabase-server";
 import { VcType } from "@/lib/types";
@@ -19,7 +20,7 @@ export async function POST(req: Request) {
     .join("\n");
 
   const result = await generateText({
-    model: "anthropic/claude-sonnet-4.6",
+    model: anthropic("claude-sonnet-4-6-20250514"),
     output: Output.object({
       schema: z.object({
         valuation: z.number().describe("The last pre-money valuation in millions the VC offered or agreed to. 0 if none discussed."),
