@@ -1,19 +1,41 @@
 import { anthropic } from "@ai-sdk/anthropic";
 import { convertToModelMessages, streamText } from "ai";
+import { z } from "zod";
+import { createClient } from "@/utils/supabase/server";
 
 export async function POST(req: Request) {
-  const { messages, system } = await req.json();
+  const { messages, system, levelId, playerId } = await req.json();
 
-  if (!system) {
-    return new Response("Missing system prompt", { status: 400 });
+  if (!system || !levelId || !playerId) {
+    return new Response("Missing required fields", { status: 400 });
   }
 
+  const supabase = await createClient();
+
   const result = streamText({
-    model: anthropic("claude-sonnet-4-6"),
+    model: anthropic("claude-sonnet-4.6"),
     system,
     messages: await convertToModelMessages(messages),
     maxOutputTokens: 300,
     maxRetries: 3,
+    tools: {
+      end_level: {
+        description: "Call this when the conversation is over. Score 0 if the founder failed. Score 1-10 based on how excited you are.",
+        parameters: z.object({
+          score: z.number().int().min(0).max(10).describe("0 = failed, 1-10 = excitement level"),
+          justification: z.string().describe("Brief explanation of your score"),
+        }),
+        execute: async ({ score, justification }) => {
+          await supabase.from("scores").insert({
+            player_id: playerId,
+            level_id: levelId,
+            score,
+            justification,
+          });
+          return { completed: true, score };
+        },
+      },
+    },
   });
 
   return result.toUIMessageStreamResponse();
