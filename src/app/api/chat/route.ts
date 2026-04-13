@@ -1,22 +1,19 @@
-import { streamText } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
-import { getVcSystemPrompt } from "@/lib/vc-prompts";
-import { VcType } from "@/lib/types";
+import { convertToModelMessages, streamText } from "ai";
 
 export async function POST(req: Request) {
-  const { messages, vcType } = await req.json();
+  const { messages, system } = await req.json();
 
-  if (!vcType || !["visionary", "empath", "shark"].includes(vcType)) {
-    return new Response("Invalid VC type", { status: 400 });
+  if (!system) {
+    return new Response("Missing system prompt", { status: 400 });
   }
-
-  const systemPrompt = getVcSystemPrompt(vcType as VcType);
 
   const result = streamText({
     model: anthropic("claude-sonnet-4-6-20250514"),
-    system: systemPrompt,
-    messages,
+    system,
+    messages: await convertToModelMessages(messages),
     maxOutputTokens: 300,
+    maxRetries: 3,
   });
 
   return result.toUIMessageStreamResponse();
