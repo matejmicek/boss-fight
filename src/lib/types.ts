@@ -1,33 +1,31 @@
-export type GameStatus = "lobby" | "teams" | "playing" | "finished";
+export type LevelType = "chat" | "voice" | "negotiation";
 
-export type VcType = "visionary" | "empath" | "shark";
-
-export interface GameState {
+export interface Level {
   id: number;
-  status: GameStatus;
-  num_teams: number | null;
-  deck_url: string | null;
-}
-
-export interface Player {
-  id: string;
   name: string;
-  team_number: number | null;
-  created_at: string;
+  description: string | null;
+  type: LevelType;
+  config: {
+    color?: string;
+    system_prompt?: string;
+    elevenlabs_agent_id?: string;
+    [key: string]: unknown;
+  };
+  unlocked: boolean;
 }
 
-export interface Negotiation {
+export interface Score {
   id: string;
   player_id: string;
-  vc_type: VcType;
-  final_valuation: number;
+  level_id: number;
+  score: number;
+  justification: string | null;
   created_at: string;
 }
 
 export interface LeaderboardEntry {
-  team_number: number;
-  best_visionary: number;
-  best_empath: number;
-  best_shark: number;
+  player_id: string;
+  name: string;
   total: number;
+  level_scores: { level_id: number; score: number }[];
 }
