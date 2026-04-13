@@ -39,10 +39,11 @@ export function Lobby({
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-6">
-      <div className="text-5xl mb-2">⚔️</div>
-      <h1 className="text-4xl font-bold mb-2">Boss Fight</h1>
-      <p className="text-zinc-500 mb-8">VC Term Sheet Negotiation Game</p>
+    <div className="flex flex-col items-center justify-center min-h-screen p-6 scanlines">
+      <h1 className="font-pixel text-3xl mb-2 text-white">BOSS FIGHT</h1>
+      <p className="font-pixel text-[10px] text-zinc-500 mb-10 tracking-wider">
+        VC TERM SHEET NEGOTIATION
+      </p>
 
       <div className="w-full max-w-xs space-y-4">
         <input
@@ -50,8 +51,8 @@ export function Lobby({
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleJoin()}
-          placeholder="Your name"
-          className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-lg text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-600"
+          placeholder="ENTER YOUR NAME"
+          className="w-full px-4 py-3 bg-zinc-900 border-2 border-zinc-700 text-white text-sm placeholder:text-zinc-600 focus:outline-none focus:border-zinc-400"
           disabled={loading}
           autoFocus
         />
@@ -59,19 +60,21 @@ export function Lobby({
         <button
           onClick={handleJoin}
           disabled={loading || !name.trim()}
-          className="w-full py-3 bg-white text-black rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-zinc-200 transition-colors"
+          className="w-full py-3 bg-white text-black font-pixel text-xs pixel-btn"
         >
-          {loading ? "Joining..." : "Join Game"}
+          {loading ? "JOINING..." : "START GAME"}
         </button>
 
-        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+        {error && (
+          <p className="text-red-500 text-sm text-center">{error}</p>
+        )}
 
         <a
           href="/deck.pdf"
           target="_blank"
-          className="block text-center text-zinc-500 hover:text-white transition-colors text-sm mt-4"
+          className="block text-center text-zinc-500 hover:text-white transition-colors text-xs mt-4"
         >
-          📄 View Startup Deck
+          [ VIEW STARTUP DECK ]
         </a>
       </div>
     </div>

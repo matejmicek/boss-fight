@@ -3,27 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { VcType } from "@/lib/types";
-
-const VC_DISPLAY: Record<
-  VcType,
-  { name: string; tagline: string; color: string }
-> = {
-  visionary: {
-    name: "The Visionary",
-    tagline: "Just finished re-reading Zero to One",
-    color: "#6fdb6f",
-  },
-  empath: {
-    name: "The Empath",
-    tagline: "Cried during your YC application video",
-    color: "#db6fdb",
-  },
-  shark: {
-    name: "The Shark",
-    tagline: "Has a spreadsheet open before you sit down",
-    color: "#db6f6f",
-  },
-};
+import { VC_INFO } from "@/lib/vc-prompts";
 
 interface MyScores {
   visionary: number | null;
@@ -89,54 +69,58 @@ export function VcSelect({
   }, [playerId]);
 
   const vcTypes: VcType[] = ["visionary", "empath", "shark"];
+  const levelLabels = ["LVL 1", "LVL 2", "LVL 3"];
 
   return (
-    <div className="flex flex-col min-h-screen p-4">
+    <div className="flex flex-col min-h-screen p-4 scanlines">
       <div className="flex justify-end items-center mb-6">
         <button
           onClick={onLeaderboard}
-          className="text-sm text-zinc-500 hover:text-white transition-colors"
+          className="font-pixel text-[10px] text-zinc-500 hover:text-white transition-colors"
         >
-          🏆 Leaderboard
+          [ LEADERBOARD ]
         </button>
       </div>
 
-      <h2 className="text-xl font-bold mb-1 text-center">Pick a VC</h2>
-      <p className="text-zinc-500 text-sm mb-6 text-center">
+      <h2 className="font-pixel text-lg mb-1 text-center">SELECT BOSS</h2>
+      <p className="text-zinc-500 text-xs mb-8 text-center">
         Negotiate for the best valuation
       </p>
 
       <div className="space-y-3 max-w-md mx-auto w-full">
-        {vcTypes.map((vc) => {
-          const info = VC_DISPLAY[vc];
+        {vcTypes.map((vc, i) => {
+          const info = VC_INFO[vc];
           const score = scores[vc];
 
           return (
             <button
               key={vc}
               onClick={() => onSelect(vc)}
-              className="w-full p-4 rounded-xl border text-left transition-all hover:scale-[1.02] active:scale-[0.98]"
-              style={{
-                borderColor: info.color + "40",
-                background: info.color + "10",
-              }}
+              className="w-full p-4 border-2 text-left transition-all pixel-btn bg-zinc-950"
+              style={{ borderColor: info.color + "60" }}
             >
               <div className="flex justify-between items-start">
                 <div>
-                  <div className="font-bold" style={{ color: info.color }}>
-                    {info.name}
+                  <div className="text-[10px] text-zinc-600 mb-1">
+                    {levelLabels[i]}
                   </div>
-                  <div className="text-zinc-500 text-sm italic mt-1">
+                  <div
+                    className="font-pixel text-xs"
+                    style={{ color: info.color }}
+                  >
+                    {info.name.toUpperCase()}
+                  </div>
+                  <div className="text-zinc-500 text-xs italic mt-1">
                     &quot;{info.tagline}&quot;
                   </div>
                 </div>
-                <div className="text-right text-sm">
+                <div className="text-right text-xs">
                   {score !== null ? (
                     <div style={{ color: "#ffd700" }}>
-                      Best: ${score.toFixed(1)}M
+                      BEST: ${score.toFixed(1)}M
                     </div>
                   ) : (
-                    <div className="text-zinc-600">No attempt yet</div>
+                    <div className="text-zinc-600">---</div>
                   )}
                 </div>
               </div>
@@ -148,9 +132,9 @@ export function VcSelect({
       <a
         href="/deck.pdf"
         target="_blank"
-        className="block text-center text-zinc-600 hover:text-white transition-colors text-sm mt-6"
+        className="block text-center text-zinc-600 hover:text-white transition-colors text-xs mt-6"
       >
-        📄 View Deck
+        [ VIEW DECK ]
       </a>
     </div>
   );

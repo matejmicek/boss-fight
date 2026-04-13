@@ -59,24 +59,26 @@ export function Leaderboard({
   };
 
   return (
-    <div className="flex flex-col min-h-screen p-4">
+    <div className="flex flex-col min-h-screen p-4 scanlines">
       {onBack && (
         <button
           onClick={onBack}
-          className="self-start text-sm text-zinc-500 hover:text-white transition-colors mb-4"
+          className="self-start text-xs text-zinc-500 hover:text-white transition-colors mb-4"
         >
-          ← Back
+          [ BACK ]
         </button>
       )}
 
-      <h2 className="text-2xl font-bold text-center mb-1">🏆 Leaderboard</h2>
-      <p className="text-zinc-500 text-sm text-center mb-6">
+      <h2 className="font-pixel text-lg text-center mb-1">HIGH SCORES</h2>
+      <p className="text-zinc-500 text-xs text-center mb-6">
         Best score per VC
       </p>
 
       <div className="max-w-lg mx-auto w-full space-y-2">
         {entries.length === 0 && (
-          <p className="text-zinc-600 text-center mt-8">No deals yet...</p>
+          <p className="text-zinc-600 text-center mt-8 text-sm">
+            No deals yet...
+          </p>
         )}
 
         {entries.map((entry, i) => {
@@ -85,20 +87,18 @@ export function Leaderboard({
           return (
             <div
               key={entry.player_id}
-              className={`flex items-center justify-between p-3 rounded-xl ${
-                isMe
-                  ? "bg-zinc-800 border border-zinc-700"
-                  : "bg-zinc-900"
+              className={`flex items-center justify-between p-3 border-2 ${
+                isMe ? "border-zinc-600 bg-zinc-900" : "border-zinc-800 bg-zinc-950"
               }`}
             >
               <div className="flex items-center gap-3">
                 <span
-                  className="text-lg font-bold w-8"
+                  className="font-pixel text-xs w-8"
                   style={{ color: medalColor(i) }}
                 >
                   {i + 1}.
                 </span>
-                <span className={isMe ? "font-bold" : ""}>
+                <span className={`text-sm ${isMe ? "font-bold" : ""}`}>
                   {entry.name}
                   {isMe && (
                     <span className="text-zinc-500 text-xs ml-2">(you)</span>
@@ -110,20 +110,20 @@ export function Leaderboard({
                 <span style={{ color: "#6fdb6f" }}>
                   {entry.best_visionary > 0
                     ? `$${Number(entry.best_visionary).toFixed(1)}M`
-                    : "—"}
+                    : "---"}
                 </span>
                 <span style={{ color: "#db6fdb" }}>
                   {entry.best_empath > 0
                     ? `$${Number(entry.best_empath).toFixed(1)}M`
-                    : "—"}
+                    : "---"}
                 </span>
                 <span style={{ color: "#db6f6f" }}>
                   {entry.best_shark > 0
                     ? `$${Number(entry.best_shark).toFixed(1)}M`
-                    : "—"}
+                    : "---"}
                 </span>
                 <span
-                  className="font-bold text-sm ml-1"
+                  className="font-pixel text-xs ml-1"
                   style={{ color: medalColor(i) }}
                 >
                   ${Number(entry.total).toFixed(1)}M
