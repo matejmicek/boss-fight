@@ -71,8 +71,19 @@ function VoiceLevelInner({
     setError(null);
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      const tokenRes = await fetch("/api/elevenlabs-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agentId }),
+      });
+      if (!tokenRes.ok) {
+        throw new Error("Failed to get conversation token");
+      }
+      const { token } = await tokenRes.json();
+
       await conversation.startSession({
-        agentId,
+        conversationToken: token,
         connectionType: "webrtc",
         dynamicVariables: {
           player_id: playerId,
