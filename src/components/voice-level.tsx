@@ -36,6 +36,7 @@ function VoiceLevelInner({
   const [error, setError] = useState<string | null>(null);
 
   const conversation = useConversation({
+    onConnect: () => setError(null),
     onError: (err) => setError(typeof err === "string" ? err : "Voice connection failed"),
   });
 
