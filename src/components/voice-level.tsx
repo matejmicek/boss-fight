@@ -78,6 +78,7 @@ function VoiceLevelInner({
 
       await conversation.startSession({
         agentId,
+        connectionType: "websocket",
         dynamicVariables: {
           player_id: playerId,
           level_id: String(level.id),
