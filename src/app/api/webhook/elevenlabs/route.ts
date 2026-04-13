@@ -5,8 +5,42 @@ export async function POST(req: Request) {
   const body = await req.json();
   const supabase = await createClient();
 
-  // Log the raw payload for debugging
+  // Keep logging for now
   await supabase.from("webhook_logs").insert({ payload: body });
+
+  if (body.type !== "post_call_transcription") {
+    return NextResponse.json({ ok: true });
+  }
+
+  const data = body.data;
+  const dynamicVars = data?.conversation_initiation_client_data?.dynamic_variables;
+
+  if (!dynamicVars?.player_id || !dynamicVars?.level_id) {
+    return NextResponse.json({ ok: true }); // No player info, skip
+  }
+
+  const playerId = dynamicVars.player_id;
+  const levelId = parseInt(dynamicVars.level_id, 10);
+
+  const evalScore = data?.analysis?.data_collection_results?.["Eval Score"];
+  const score = evalScore?.value ?? 0;
+  const justification = evalScore?.rationale ?? data?.analysis?.transcript_summary ?? null;
+
+  if (score === null || score === undefined) {
+    return NextResponse.json({ ok: true }); // No score, skip
+  }
+
+  const { error } = await supabase.from("scores").insert({
+    player_id: playerId,
+    level_id: levelId,
+    score: Math.min(10, Math.max(0, Math.round(Number(score)))),
+    justification: typeof justification === "string" ? justification : null,
+  });
+
+  if (error) {
+    console.error("Failed to save ElevenLabs score:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true });
 }
