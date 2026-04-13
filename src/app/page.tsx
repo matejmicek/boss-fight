@@ -1,20 +1,20 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { createClient } from "@/utils/supabase/client";
-import { VcType } from "@/lib/types";
+import { useState, useEffect } from "react";
+import { Level } from "@/lib/types";
 import { Lobby } from "@/components/lobby";
-import { VcSelect } from "@/components/vc-select";
-import { Negotiation } from "@/components/negotiation";
+import { LevelSelect } from "@/components/level-select";
+import { ChatLevel } from "@/components/chat-level";
+import { VoiceLevel } from "@/components/voice-level";
 import { Leaderboard } from "@/components/leaderboard";
 
-type Screen = "vc-select" | "negotiation" | "leaderboard";
+type Screen = "level-select" | "playing" | "leaderboard";
 
 export default function Home() {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [playerName, setPlayerName] = useState<string | null>(null);
-  const [screen, setScreen] = useState<Screen>("vc-select");
-  const [activeVc, setActiveVc] = useState<VcType | null>(null);
+  const [screen, setScreen] = useState<Screen>("level-select");
+  const [activeLevel, setActiveLevel] = useState<Level | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("boss-fight-player");
@@ -24,26 +24,6 @@ export default function Home() {
       setPlayerName(parsed.name);
     }
   }, []);
-
-  // Verify stored player still exists in DB
-  const verifyPlayer = useCallback(async () => {
-    if (!playerId) return;
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("players")
-      .select("id")
-      .eq("id", playerId)
-      .single();
-    if (!data) {
-      localStorage.removeItem("boss-fight-player");
-      setPlayerId(null);
-      setPlayerName(null);
-    }
-  }, [playerId]);
-
-  useEffect(() => {
-    verifyPlayer();
-  }, [verifyPlayer]);
 
   function handleJoin(id: string, name: string) {
     setPlayerId(id);
@@ -59,31 +39,47 @@ export default function Home() {
     return (
       <Leaderboard
         currentPlayerId={playerId}
-        onBack={() => setScreen("vc-select")}
+        onBack={() => setScreen("level-select")}
       />
     );
   }
 
-  if (screen === "negotiation" && activeVc) {
-    return (
-      <Negotiation
-        playerId={playerId}
-        vcType={activeVc}
-        onBack={() => {
-          setScreen("vc-select");
-          setActiveVc(null);
-        }}
-        onDealClosed={() => {}}
-      />
-    );
+  if (screen === "playing" && activeLevel) {
+    if (activeLevel.type === "chat") {
+      return (
+        <ChatLevel
+          playerId={playerId}
+          level={activeLevel}
+          onBack={() => {
+            setScreen("level-select");
+            setActiveLevel(null);
+          }}
+          onComplete={() => {}}
+        />
+      );
+    }
+
+    if (activeLevel.type === "voice") {
+      return (
+        <VoiceLevel
+          playerId={playerId}
+          level={activeLevel}
+          onBack={() => {
+            setScreen("level-select");
+            setActiveLevel(null);
+          }}
+          onComplete={() => {}}
+        />
+      );
+    }
   }
 
   return (
-    <VcSelect
+    <LevelSelect
       playerId={playerId}
-      onSelect={(vc) => {
-        setActiveVc(vc);
-        setScreen("negotiation");
+      onSelect={(level) => {
+        setActiveLevel(level);
+        setScreen("playing");
       }}
       onLeaderboard={() => setScreen("leaderboard")}
     />
