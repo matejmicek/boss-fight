@@ -72,6 +72,7 @@ function VoiceLevelInner({
       await navigator.mediaDevices.getUserMedia({ audio: true });
       await conversation.startSession({
         agentId,
+        connectionType: "webrtc",
         dynamicVariables: {
           player_id: playerId,
           level_id: String(level.id),
