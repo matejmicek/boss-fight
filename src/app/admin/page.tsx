@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getBrowserClient } from "@/lib/supabase-browser";
+import { createClient } from "@/utils/supabase/client";
 import { GameState } from "@/lib/types";
 import { Leaderboard } from "@/components/leaderboard";
 
@@ -12,7 +12,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState("");
 
   useEffect(() => {
-    const supabase = getBrowserClient();
+    const supabase = createClient();
 
     supabase
       .from("game_state")

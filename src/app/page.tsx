@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getBrowserClient } from "@/lib/supabase-browser";
+import { createClient } from "@/utils/supabase/client";
 import { VcType } from "@/lib/types";
 import { Lobby } from "@/components/lobby";
 import { VcSelect } from "@/components/vc-select";
@@ -28,7 +28,7 @@ export default function Home() {
   // Verify stored player still exists in DB
   const verifyPlayer = useCallback(async () => {
     if (!playerId) return;
-    const supabase = getBrowserClient();
+    const supabase = createClient();
     const { data } = await supabase
       .from("players")
       .select("id")

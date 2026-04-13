@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { generateText, Output } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { z } from "zod";
-import { createServerClient } from "@/lib/supabase-server";
+import { createClient } from "@/utils/supabase/server";
 import { VcType } from "@/lib/types";
 
 export async function POST(req: Request) {
@@ -12,7 +12,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
 
-  // Ask Claude to extract the final valuation from the conversation
   const transcript = messages
     .map((m: { role: string; content: string }) =>
       `${m.role === "user" ? "Founder" : "VC"}: ${m.content}`
@@ -40,7 +39,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const supabase = createServerClient();
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("negotiations")

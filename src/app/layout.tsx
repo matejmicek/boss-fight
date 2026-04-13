@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
-import { Geist_Mono } from "next/font/google";
+import { Geist_Mono, Geist } from "next/font/google";
 import "./globals.css";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const mono = Geist_Mono({
   variable: "--font-mono",
@@ -18,7 +21,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${mono.variable} h-full`}>
+    <html lang="en" className={cn("h-full", mono.variable, "font-sans", geist.variable)}>
       <body className="min-h-full flex flex-col bg-black text-white font-[family-name:var(--font-mono)]">
         {children}
       </body>

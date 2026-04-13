@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase-server";
+import { createClient } from "@/utils/supabase/server";
 
 export async function POST() {
-  const supabase = createServerClient();
+  const supabase = await createClient();
 
   await supabase
     .from("game_state")

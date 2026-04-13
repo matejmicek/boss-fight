@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getBrowserClient } from "@/lib/supabase-browser";
+import { createClient } from "@/utils/supabase/client";
 
 interface LeaderboardEntry {
   player_id: string;
@@ -22,7 +22,7 @@ export function Leaderboard({
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
 
   async function fetchLeaderboard() {
-    const supabase = getBrowserClient();
+    const supabase = createClient();
     const { data } = await supabase
       .from("leaderboard")
       .select("*")
@@ -34,7 +34,7 @@ export function Leaderboard({
   useEffect(() => {
     fetchLeaderboard();
 
-    const supabase = getBrowserClient();
+    const supabase = createClient();
     const channel = supabase
       .channel("leaderboard-updates")
       .on(

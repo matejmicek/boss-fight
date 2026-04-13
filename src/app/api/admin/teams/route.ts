@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase-server";
+import { createClient } from "@/utils/supabase/server";
 
 export async function POST(req: Request) {
   const { numTeams } = await req.json();
@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const supabase = createServerClient();
+  const supabase = await createClient();
 
   const { data: players } = await supabase
     .from("players")

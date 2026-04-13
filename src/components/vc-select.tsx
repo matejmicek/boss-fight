@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getBrowserClient } from "@/lib/supabase-browser";
+import { createClient } from "@/utils/supabase/client";
 import { VcType } from "@/lib/types";
 
 const VC_DISPLAY: Record<
@@ -47,7 +47,7 @@ export function VcSelect({
   });
 
   async function fetchScores() {
-    const supabase = getBrowserClient();
+    const supabase = createClient();
 
     const { data: deals } = await supabase
       .from("negotiations")
@@ -70,7 +70,7 @@ export function VcSelect({
   useEffect(() => {
     fetchScores();
 
-    const supabase = getBrowserClient();
+    const supabase = createClient();
     const channel = supabase
       .channel("my-scores")
       .on(
