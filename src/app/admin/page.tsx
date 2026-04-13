@@ -173,11 +173,9 @@ export default function AdminPage() {
         )}
       </div>
 
-      {(gameState.status === "playing" || gameState.status === "finished") && (
-        <div className="border-t border-zinc-800 pt-6">
-          <Leaderboard teamNumber={null} />
-        </div>
-      )}
+      <div className="border-t border-zinc-800 pt-6">
+        <Leaderboard currentPlayerId={null} />
+      </div>
     </div>
   );
 }

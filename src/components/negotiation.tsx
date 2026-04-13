@@ -14,13 +14,11 @@ const VC_DISPLAY: Record<VcType, { name: string; color: string }> = {
 export function Negotiation({
   playerId,
   vcType,
-  teamNumber,
   onBack,
   onDealClosed,
 }: {
   playerId: string;
   vcType: VcType;
-  teamNumber: number;
   onBack: () => void;
   onDealClosed: (valuation: number) => void;
 }) {
@@ -103,7 +101,6 @@ export function Negotiation({
           {vc.name}
         </div>
         <div className="flex items-center gap-3 text-sm">
-          <span className="text-zinc-500">Team {teamNumber}</span>
           <a
             href="/deck.pdf"
             target="_blank"

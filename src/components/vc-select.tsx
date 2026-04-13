@@ -25,22 +25,22 @@ const VC_DISPLAY: Record<
   },
 };
 
-interface TeamScores {
+interface MyScores {
   visionary: number | null;
   empath: number | null;
   shark: number | null;
 }
 
 export function VcSelect({
-  teamNumber,
+  playerId,
   onSelect,
   onLeaderboard,
 }: {
-  teamNumber: number;
+  playerId: string;
   onSelect: (vc: VcType) => void;
   onLeaderboard: () => void;
 }) {
-  const [scores, setScores] = useState<TeamScores>({
+  const [scores, setScores] = useState<MyScores>({
     visionary: null,
     empath: null,
     shark: null,
@@ -49,23 +49,14 @@ export function VcSelect({
   async function fetchScores() {
     const supabase = getBrowserClient();
 
-    const { data: teammates } = await supabase
-      .from("players")
-      .select("id")
-      .eq("team_number", teamNumber);
-
-    if (!teammates || teammates.length === 0) return;
-
-    const teamIds = (teammates as { id: string }[]).map((t) => t.id);
-
     const { data: deals } = await supabase
       .from("negotiations")
       .select("vc_type, final_valuation")
-      .in("player_id", teamIds);
+      .eq("player_id", playerId);
 
     if (!deals) return;
 
-    const best: TeamScores = { visionary: null, empath: null, shark: null };
+    const best: MyScores = { visionary: null, empath: null, shark: null };
     for (const deal of deals as { vc_type: string; final_valuation: number }[]) {
       const vc = deal.vc_type as VcType;
       const val = Number(deal.final_valuation);
@@ -81,7 +72,7 @@ export function VcSelect({
 
     const supabase = getBrowserClient();
     const channel = supabase
-      .channel("team-scores")
+      .channel("my-scores")
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "negotiations" },
@@ -95,14 +86,13 @@ export function VcSelect({
       supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teamNumber]);
+  }, [playerId]);
 
   const vcTypes: VcType[] = ["visionary", "empath", "shark"];
 
   return (
     <div className="flex flex-col min-h-screen p-4">
-      <div className="flex justify-between items-center mb-6">
-        <div className="text-sm text-zinc-500">Team {teamNumber}</div>
+      <div className="flex justify-end items-center mb-6">
         <button
           onClick={onLeaderboard}
           className="text-sm text-zinc-500 hover:text-white transition-colors"

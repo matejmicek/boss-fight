@@ -10,19 +10,6 @@ export async function POST(req: Request) {
 
   const supabase = createServerClient();
 
-  const { data: gameState } = await supabase
-    .from("game_state")
-    .select("status")
-    .eq("id", 1)
-    .single();
-
-  if (gameState?.status !== "lobby") {
-    return NextResponse.json(
-      { error: "Game already in progress" },
-      { status: 400 }
-    );
-  }
-
   const { data, error } = await supabase
     .from("players")
     .insert({ name: name.trim() })

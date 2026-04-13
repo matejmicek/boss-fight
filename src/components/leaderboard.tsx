@@ -2,13 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { getBrowserClient } from "@/lib/supabase-browser";
-import { LeaderboardEntry } from "@/lib/types";
+
+interface LeaderboardEntry {
+  player_id: string;
+  name: string;
+  best_visionary: number;
+  best_empath: number;
+  best_shark: number;
+  total: number;
+}
 
 export function Leaderboard({
-  teamNumber,
+  currentPlayerId,
   onBack,
 }: {
-  teamNumber: number | null;
+  currentPlayerId: string | null;
   onBack?: () => void;
 }) {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
@@ -63,7 +71,7 @@ export function Leaderboard({
 
       <h2 className="text-2xl font-bold text-center mb-1">🏆 Leaderboard</h2>
       <p className="text-zinc-500 text-sm text-center mb-6">
-        Best score per VC per team
+        Best score per VC
       </p>
 
       <div className="max-w-lg mx-auto w-full space-y-2">
@@ -72,13 +80,13 @@ export function Leaderboard({
         )}
 
         {entries.map((entry, i) => {
-          const isMyTeam = entry.team_number === teamNumber;
+          const isMe = entry.player_id === currentPlayerId;
 
           return (
             <div
-              key={entry.team_number}
+              key={entry.player_id}
               className={`flex items-center justify-between p-3 rounded-xl ${
-                isMyTeam
+                isMe
                   ? "bg-zinc-800 border border-zinc-700"
                   : "bg-zinc-900"
               }`}
@@ -90,9 +98,9 @@ export function Leaderboard({
                 >
                   {i + 1}.
                 </span>
-                <span className={isMyTeam ? "font-bold" : ""}>
-                  Team {entry.team_number}
-                  {isMyTeam && (
+                <span className={isMe ? "font-bold" : ""}>
+                  {entry.name}
+                  {isMe && (
                     <span className="text-zinc-500 text-xs ml-2">(you)</span>
                   )}
                 </span>
