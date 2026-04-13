@@ -47,7 +47,7 @@ export function ChatLevel({
             {level.name.toUpperCase()}
           </div>
           <a
-            href="/deck.pdf"
+            href="/deck"
             target="_blank"
             className="text-zinc-500 hover:text-white transition-colors text-xs"
           >

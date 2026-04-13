@@ -70,7 +70,7 @@ export function Lobby({
         )}
 
         <a
-          href="/deck.pdf"
+          href="/deck"
           target="_blank"
           className="block text-center text-zinc-500 hover:text-white transition-colors text-xs mt-4"
         >
