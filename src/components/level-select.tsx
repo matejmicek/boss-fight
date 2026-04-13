@@ -6,7 +6,7 @@ import { Level } from "@/lib/types";
 import { getLevelColor, LEVEL_TYPE_LABELS } from "@/lib/levels";
 
 interface MyScores {
-  [levelId: number]: number;
+  [levelId: number]: { best: number; attempts: number };
 }
 
 export function LevelSelect({
@@ -15,7 +15,7 @@ export function LevelSelect({
   onLeaderboard,
 }: {
   playerId: string;
-  onSelect: (level: Level) => void;
+  onSelect: (level: Level, attemptNumber: number) => void;
   onLeaderboard: () => void;
 }) {
   const [levels, setLevels] = useState<Level[]>([]);
@@ -42,8 +42,11 @@ export function LevelSelect({
     for (const row of data) {
       const lid = row.level_id as number;
       const s = row.score as number;
-      if (best[lid] === undefined || s > best[lid]) {
-        best[lid] = s;
+      if (!best[lid]) {
+        best[lid] = { best: s, attempts: 1 };
+      } else {
+        best[lid].attempts++;
+        if (s > best[lid].best) best[lid].best = s;
       }
     }
     setScores(best);
@@ -99,14 +102,17 @@ export function LevelSelect({
       <div className="space-y-3 max-w-md mx-auto w-full">
         {levels.map((level) => {
           const color = getLevelColor(level);
-          const score = scores[level.id];
-          const locked = !level.unlocked;
+          const info = scores[level.id];
+          const maxAttempts = 2;
+          const attemptsUsed = info?.attempts ?? 0;
+          const noRetries = attemptsUsed >= maxAttempts;
+          const locked = !level.unlocked || noRetries;
           const typeLabel = LEVEL_TYPE_LABELS[level.type] || level.type.toUpperCase();
 
           return (
             <button
               key={level.id}
-              onClick={() => !locked && onSelect(level)}
+              onClick={() => !locked && onSelect(level, attemptsUsed + 1)}
               disabled={locked}
               className={`w-full p-4 border-2 text-left transition-all bg-zinc-950 ${
                 locked ? "opacity-40 cursor-not-allowed" : "pixel-btn"
@@ -133,7 +139,7 @@ export function LevelSelect({
                     className="font-pixel text-xs"
                     style={{ color: locked ? "#666" : color }}
                   >
-                    {locked ? "LOCKED" : level.name.toUpperCase()}
+                    {!level.unlocked ? "LOCKED" : noRetries ? "NO RETRIES LEFT" : level.name.toUpperCase()}
                   </div>
                   {!locked && level.description && (
                     <div className="text-zinc-500 text-xs italic mt-1">
@@ -142,11 +148,16 @@ export function LevelSelect({
                   )}
                 </div>
                 <div className="text-right text-xs">
-                  {!locked && score !== undefined ? (
-                    <div style={{ color: "#ffd700" }}>
-                      BEST: {score}/10
-                    </div>
-                  ) : !locked ? (
+                  {level.unlocked && info ? (
+                    <>
+                      <div style={{ color: "#ffd700" }}>
+                        BEST: {info.best}/10
+                      </div>
+                      <div className="text-zinc-600 text-[10px] mt-1">
+                        {attemptsUsed}/{maxAttempts} TRIES
+                      </div>
+                    </>
+                  ) : level.unlocked ? (
                     <div className="text-zinc-600">---</div>
                   ) : null}
                 </div>
