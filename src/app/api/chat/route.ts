@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     tools: {
       end_level: {
         description: "Call this when the conversation is over. Score 0 if the founder failed. Score 1-10 based on how excited you are.",
-        parameters: z.object({
+        inputSchema: z.object({
           score: z.number().int().min(0).max(10).describe("0 = failed, 1-10 = excitement level"),
           justification: z.string().describe("Brief explanation of your score"),
         }),

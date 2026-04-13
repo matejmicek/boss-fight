@@ -23,7 +23,7 @@ export function VoiceLevel({
   const [error, setError] = useState<string | null>(null);
 
   const conversation = useConversation({
-    onError: (err) => setError(err.message || "Voice connection failed"),
+    onError: (err) => setError(typeof err === "string" ? err : "Voice connection failed"),
   });
 
   useEffect(() => {
