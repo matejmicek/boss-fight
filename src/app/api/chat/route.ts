@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   const supabase = await createClient();
 
   const result = streamText({
-    model: anthropic("claude-sonnet-4.6"),
+    model: anthropic("claude-sonnet-4-6"),
     system,
     messages: await convertToModelMessages(messages),
     maxOutputTokens: 300,
