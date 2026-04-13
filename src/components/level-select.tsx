@@ -13,10 +13,12 @@ export function LevelSelect({
   playerId,
   onSelect,
   onLeaderboard,
+  pendingLevelId,
 }: {
   playerId: string;
   onSelect: (level: Level) => void;
   onLeaderboard: () => void;
+  pendingLevelId?: number | null;
 }) {
   const [levels, setLevels] = useState<Level[]>([]);
   const [scores, setScores] = useState<MyScores>({});
@@ -157,6 +159,8 @@ export function LevelSelect({
                         {attemptsUsed}/{maxAttempts} TRIES
                       </div>
                     </>
+                  ) : level.unlocked && pendingLevelId === level.id ? (
+                    <div className="text-yellow-500 animate-pulse">PENDING...</div>
                   ) : level.unlocked ? (
                     <div className="text-zinc-600">---</div>
                   ) : null}

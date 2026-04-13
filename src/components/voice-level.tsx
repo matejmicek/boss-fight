@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { ConversationProvider, useConversation } from "@elevenlabs/react";
 import { Level } from "@/lib/types";
 import { getLevelColor } from "@/lib/levels";
-import { createClient } from "@/utils/supabase/client";
 
 export function VoiceLevel(props: {
   playerId: string;
@@ -32,44 +31,17 @@ function VoiceLevelInner({
 }) {
   const color = getLevelColor(level);
   const agentId = level.config.elevenlabs_agent_id as string;
-  const [completed, setCompleted] = useState<{ score: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [callEnded, setCallEnded] = useState(false);
 
   const conversation = useConversation({
     onConnect: () => setError(null),
     onDisconnect: () => {
-      // Only show error if we disconnected unexpectedly (not user-initiated)
-      if (!completed) setError("Call disconnected");
+      setCallEnded(true);
     },
     onError: (err) => console.warn("ElevenLabs error:", err),
   });
 
-  useEffect(() => {
-    const supabase = createClient();
-    const channel = supabase
-      .channel(`voice-score-${playerId}-${level.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "scores",
-          filter: `player_id=eq.${playerId}`,
-        },
-        (payload) => {
-          const row = payload.new as { level_id: number; score: number };
-          if (row.level_id === level.id) {
-            setCompleted({ score: row.score });
-            conversation.endSession();
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [playerId, level.id, conversation]);
 
   const startCall = useCallback(async () => {
     setError(null);
@@ -89,27 +61,13 @@ function VoiceLevelInner({
     }
   }, [agentId, conversation, playerId, level.id]);
 
-  if (completed) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-6 scanlines">
-        <div className="font-pixel text-xl mb-2" style={{ color: "#ffd700" }}>
-          LEVEL COMPLETE
-        </div>
-        <div className="text-4xl font-bold" style={{ color: "#ffd700" }}>
-          {completed.score}/10
-        </div>
-        <button
-          onClick={() => {
-            onComplete(completed.score);
-            onBack();
-          }}
-          className="mt-6 px-6 py-3 border-2 border-zinc-700 hover:border-zinc-500 transition-colors text-xs pixel-btn"
-        >
-          CONTINUE
-        </button>
-      </div>
-    );
-  }
+  // When the call ends (user or agent hangs up), go back to level select
+  // The score will arrive via webhook -> supabase -> realtime on level select
+  useEffect(() => {
+    if (callEnded) {
+      onBack();
+    }
+  }, [callEnded, onBack]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-6 scanlines">

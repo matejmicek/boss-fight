@@ -15,6 +15,7 @@ export default function Home() {
   const [playerName, setPlayerName] = useState<string | null>(null);
   const [screen, setScreen] = useState<Screen>("level-select");
   const [activeLevel, setActiveLevel] = useState<Level | null>(null);
+  const [pendingLevelId, setPendingLevelId] = useState<number | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("boss-fight-player");
@@ -65,6 +66,7 @@ export default function Home() {
           playerId={playerId}
           level={activeLevel}
           onBack={() => {
+            setPendingLevelId(activeLevel.id);
             setScreen("level-select");
             setActiveLevel(null);
           }}
@@ -77,7 +79,9 @@ export default function Home() {
   return (
     <LevelSelect
       playerId={playerId}
+      pendingLevelId={pendingLevelId}
       onSelect={(level) => {
+        setPendingLevelId(null);
         setActiveLevel(level);
         setScreen("playing");
       }}
