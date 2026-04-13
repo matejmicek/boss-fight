@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     .join("\n");
 
   const result = await generateText({
-    model: anthropic("claude-sonnet-4-6-20250514"),
+    model: anthropic("claude-sonnet-4-6"),
     output: Output.object({
       schema: z.object({
         valuation: z.number().describe("The last pre-money valuation in millions the VC offered or agreed to. 0 if none discussed."),
