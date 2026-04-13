@@ -38,15 +38,15 @@ export function Negotiation({
           className="flex justify-between items-center px-4 py-3 border-b-2"
           style={{ borderColor: vc.color + "60" }}
         >
-          <div className="font-bold text-sm" style={{ color: vc.color }}>
-            {vc.name}
+          <div className="font-pixel text-xs" style={{ color: vc.color }}>
+            {vc.name.toUpperCase()}
           </div>
           <a
             href="/deck.pdf"
             target="_blank"
-            className="text-zinc-500 hover:text-white transition-colors text-sm"
+            className="text-zinc-500 hover:text-white transition-colors text-xs"
           >
-            View Deck
+            [ DECK ]
           </a>
         </div>
 
@@ -124,16 +124,16 @@ function NegotiationFooter({
   if (dealResult !== null) {
     return (
       <div className="flex flex-col items-center justify-center p-6">
-        <div className="text-5xl mb-4">DEAL!</div>
+        <div className="font-pixel text-2xl mb-4" style={{ color: "#ffd700" }}>DEAL!</div>
         <div className="text-4xl font-bold" style={{ color: "#ffd700" }}>
           ${dealResult.toFixed(1)}M
         </div>
         <p className="text-zinc-500 mt-1 text-sm">pre-money valuation</p>
         <button
           onClick={onBack}
-          className="mt-6 px-6 py-3 border-2 border-zinc-700 hover:border-zinc-500 transition-colors text-sm"
+          className="mt-6 px-6 py-3 border-2 border-zinc-700 hover:border-zinc-500 transition-colors text-xs pixel-btn"
         >
-          Back to VCs
+          CONTINUE
         </button>
       </div>
     );
@@ -143,18 +143,18 @@ function NegotiationFooter({
     <div className="flex justify-between px-4 py-2 border-t border-zinc-800">
       <button
         onClick={onBack}
-        className="text-sm transition-colors"
+        className="font-pixel text-sm transition-colors"
         style={{ color: "#db6f6f" }}
       >
-        Walk away
+        QUIT
       </button>
       <button
         onClick={handleAcceptDeal}
         disabled={closing}
-        className="text-sm disabled:opacity-30 transition-colors"
+        className="font-pixel text-sm disabled:opacity-30 transition-colors"
         style={{ color: vcColor }}
       >
-        {closing ? "Closing..." : "Accept deal"}
+        {closing ? "CLOSING..." : "DEAL!"}
       </button>
     </div>
   );
