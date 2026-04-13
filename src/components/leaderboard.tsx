@@ -2,15 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
-
-interface LeaderboardEntry {
-  player_id: string;
-  name: string;
-  best_visionary: number;
-  best_empath: number;
-  best_shark: number;
-  total: number;
-}
+import { Level, LeaderboardEntry } from "@/lib/types";
+import { getLevelColor } from "@/lib/levels";
 
 export function Leaderboard({
   currentPlayerId,
@@ -20,30 +13,27 @@ export function Leaderboard({
   onBack?: () => void;
 }) {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  const [levels, setLevels] = useState<Level[]>([]);
 
   async function fetchLeaderboard() {
     const supabase = createClient();
-    const { data } = await supabase
-      .from("leaderboard")
-      .select("*")
-      .order("total", { ascending: false });
-
+    const { data } = await supabase.from("leaderboard").select("*").order("total", { ascending: false });
     if (data) setEntries(data as LeaderboardEntry[]);
+  }
+
+  async function fetchLevels() {
+    const res = await fetch("/api/levels");
+    if (res.ok) setLevels(await res.json());
   }
 
   useEffect(() => {
     fetchLeaderboard();
+    fetchLevels();
 
     const supabase = createClient();
     const channel = supabase
       .channel("leaderboard-updates")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "negotiations" },
-        () => {
-          fetchLeaderboard();
-        }
-      )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "scores" }, () => fetchLeaderboard())
       .subscribe();
 
     return () => {
@@ -58,6 +48,11 @@ export function Leaderboard({
     return "#666";
   };
 
+  function getScoreForLevel(entry: LeaderboardEntry, levelId: number): number | null {
+    const found = entry.level_scores.find((ls) => ls.level_id === levelId);
+    return found ? found.score : null;
+  }
+
   return (
     <div className="flex flex-col min-h-screen p-4 scanlines">
       {onBack && (
@@ -70,15 +65,11 @@ export function Leaderboard({
       )}
 
       <h2 className="font-pixel text-lg text-center mb-1">HIGH SCORES</h2>
-      <p className="text-zinc-500 text-xs text-center mb-6">
-        Best score per VC
-      </p>
+      <p className="text-zinc-500 text-xs text-center mb-6">Best score per level</p>
 
-      <div className="max-w-lg mx-auto w-full space-y-2">
+      <div className="max-w-2xl mx-auto w-full space-y-2">
         {entries.length === 0 && (
-          <p className="text-zinc-600 text-center mt-8 text-sm">
-            No deals yet...
-          </p>
+          <p className="text-zinc-600 text-center mt-8 text-sm">No scores yet...</p>
         )}
 
         {entries.map((entry, i) => {
@@ -92,41 +83,27 @@ export function Leaderboard({
               }`}
             >
               <div className="flex items-center gap-3">
-                <span
-                  className="font-pixel text-xs w-8"
-                  style={{ color: medalColor(i) }}
-                >
+                <span className="font-pixel text-xs w-8" style={{ color: medalColor(i) }}>
                   {i + 1}.
                 </span>
                 <span className={`text-sm ${isMe ? "font-bold" : ""}`}>
                   {entry.name}
-                  {isMe && (
-                    <span className="text-zinc-500 text-xs ml-2">(you)</span>
-                  )}
+                  {isMe && <span className="text-zinc-500 text-xs ml-2">(you)</span>}
                 </span>
               </div>
 
               <div className="flex items-center gap-3 text-xs">
-                <span style={{ color: "#6fdb6f" }}>
-                  {entry.best_visionary > 0
-                    ? `$${Number(entry.best_visionary).toFixed(1)}M`
-                    : "---"}
-                </span>
-                <span style={{ color: "#db6fdb" }}>
-                  {entry.best_empath > 0
-                    ? `$${Number(entry.best_empath).toFixed(1)}M`
-                    : "---"}
-                </span>
-                <span style={{ color: "#db6f6f" }}>
-                  {entry.best_shark > 0
-                    ? `$${Number(entry.best_shark).toFixed(1)}M`
-                    : "---"}
-                </span>
-                <span
-                  className="font-pixel text-xs ml-1"
-                  style={{ color: medalColor(i) }}
-                >
-                  ${Number(entry.total).toFixed(1)}M
+                {levels.map((level) => {
+                  const score = getScoreForLevel(entry, level.id);
+                  const color = getLevelColor(level);
+                  return (
+                    <span key={level.id} style={{ color: score ? color : "#444" }}>
+                      {score !== null ? `${score}/10` : "---"}
+                    </span>
+                  );
+                })}
+                <span className="font-pixel text-xs ml-1" style={{ color: medalColor(i) }}>
+                  {entry.total}
                 </span>
               </div>
             </div>
