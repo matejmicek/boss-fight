@@ -1,12 +1,25 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useConversation } from "@elevenlabs/react";
+import { ConversationProvider, useConversation } from "@elevenlabs/react";
 import { Level } from "@/lib/types";
 import { getLevelColor } from "@/lib/levels";
 import { createClient } from "@/utils/supabase/client";
 
-export function VoiceLevel({
+export function VoiceLevel(props: {
+  playerId: string;
+  level: Level;
+  onBack: () => void;
+  onComplete: (score: number) => void;
+}) {
+  return (
+    <ConversationProvider>
+      <VoiceLevelInner {...props} />
+    </ConversationProvider>
+  );
+}
+
+function VoiceLevelInner({
   playerId,
   level,
   onBack,
