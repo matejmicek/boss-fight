@@ -15,7 +15,7 @@ export function LevelSelect({
   onLeaderboard,
 }: {
   playerId: string;
-  onSelect: (level: Level, attemptNumber: number) => void;
+  onSelect: (level: Level) => void;
   onLeaderboard: () => void;
 }) {
   const [levels, setLevels] = useState<Level[]>([]);
@@ -112,7 +112,7 @@ export function LevelSelect({
           return (
             <button
               key={level.id}
-              onClick={() => !locked && onSelect(level, attemptsUsed + 1)}
+              onClick={() => !locked && onSelect(level)}
               disabled={locked}
               className={`w-full p-4 border-2 text-left transition-all bg-zinc-950 ${
                 locked ? "opacity-40 cursor-not-allowed" : "pixel-btn"

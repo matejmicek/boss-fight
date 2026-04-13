@@ -26,6 +26,16 @@ export async function POST(req: Request) {
           justification: z.string().describe("Brief explanation of your score"),
         }),
         execute: async ({ score, justification }) => {
+          const { count } = await supabase
+            .from("scores")
+            .select("id", { count: "exact", head: true })
+            .eq("player_id", playerId)
+            .eq("level_id", levelId);
+
+          if (count !== null && count >= 2) {
+            return { completed: false, error: "No attempts remaining" };
+          }
+
           await supabase.from("scores").insert({
             player_id: playerId,
             level_id: levelId,

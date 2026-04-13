@@ -15,7 +15,6 @@ export default function Home() {
   const [playerName, setPlayerName] = useState<string | null>(null);
   const [screen, setScreen] = useState<Screen>("level-select");
   const [activeLevel, setActiveLevel] = useState<Level | null>(null);
-  const [attemptNumber, setAttemptNumber] = useState(1);
 
   useEffect(() => {
     const stored = localStorage.getItem("boss-fight-player");
@@ -51,7 +50,6 @@ export default function Home() {
         <ChatLevel
           playerId={playerId}
           level={activeLevel}
-          attemptNumber={attemptNumber}
           onBack={() => {
             setScreen("level-select");
             setActiveLevel(null);
@@ -79,9 +77,8 @@ export default function Home() {
   return (
     <LevelSelect
       playerId={playerId}
-      onSelect={(level, attempt) => {
+      onSelect={(level) => {
         setActiveLevel(level);
-        setAttemptNumber(attempt);
         setScreen("playing");
       }}
       onLeaderboard={() => setScreen("leaderboard")}

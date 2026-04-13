@@ -16,13 +16,11 @@ export function ChatLevel({
   level,
   onBack,
   onComplete,
-  attemptNumber,
 }: {
   playerId: string;
   level: Level;
   onBack: () => void;
   onComplete: (score: number) => void;
-  attemptNumber: number;
 }) {
   const color = getLevelColor(level);
   const systemPrompt = level.config.system_prompt || "";
@@ -67,7 +65,6 @@ export function ChatLevel({
           color={color}
           onBack={onBack}
           onComplete={onComplete}
-          attemptNumber={attemptNumber}
         />
       </div>
     </AssistantRuntimeProvider>
@@ -80,17 +77,13 @@ function ChatLevelFooter({
   color,
   onBack,
   onComplete,
-  attemptNumber,
 }: {
   playerId: string;
   levelId: number;
   color: string;
   onBack: () => void;
   onComplete: (score: number) => void;
-  attemptNumber: number;
 }) {
-  const maxAttempts = 2;
-  const hasRetry = attemptNumber < maxAttempts;
   const runtime = useAssistantRuntime();
   const [completed, setCompleted] = useState<{ score: number } | null>(null);
 
@@ -129,11 +122,6 @@ function ChatLevelFooter({
         <div className="text-4xl font-bold" style={{ color: "#ffd700" }}>
           {completed.score}/10
         </div>
-        {hasRetry && (
-          <div className="text-zinc-500 text-xs mt-2">
-            1 RETRY AVAILABLE
-          </div>
-        )}
         <button
           onClick={() => {
             onComplete(completed.score);
