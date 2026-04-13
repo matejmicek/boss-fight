@@ -58,7 +58,7 @@ body {
 }
 .chat-scroll::-webkit-scrollbar-thumb {
   background: #333;
-  border-radius: 2px;
+  border-radius: 0;
 }
 
 @theme inline {
@@ -138,12 +138,63 @@ body {
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* Pixel font utility */
+.font-pixel {
+  font-family: var(--font-pixel), monospace;
+}
+
+/* Retro pixelated border style */
+.pixel-border {
+  border: 2px solid #333;
+  box-shadow:
+    2px 2px 0 #333,
+    -2px -2px 0 #333,
+    2px -2px 0 #333,
+    -2px 2px 0 #333;
+}
+
+/* Pixel button style */
+.pixel-btn {
+  border: 2px solid #555;
+  box-shadow: 3px 3px 0 #222;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.pixel-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 #222;
+}
+.pixel-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 #222;
+}
+.pixel-btn:disabled {
+  opacity: 0.4;
+  transform: none;
+  box-shadow: 3px 3px 0 #222;
+}
+
+/* Subtle scanline overlay for retro feel */
+.scanlines::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.05) 2px,
+    rgba(0, 0, 0, 0.05) 4px
+  );
+  pointer-events: none;
+  z-index: 50;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-black text-white;
   }
   html {
     @apply font-sans;
