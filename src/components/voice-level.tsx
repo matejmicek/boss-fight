@@ -37,7 +37,11 @@ function VoiceLevelInner({
 
   const conversation = useConversation({
     onConnect: () => setError(null),
-    onError: (err) => setError(typeof err === "string" ? err : "Voice connection failed"),
+    onDisconnect: () => {
+      // Only show error if we disconnected unexpectedly (not user-initiated)
+      if (!completed) setError("Call disconnected");
+    },
+    onError: (err) => console.warn("ElevenLabs error:", err),
   });
 
   useEffect(() => {
@@ -137,6 +141,12 @@ function VoiceLevelInner({
           >
             END CALL
           </button>
+        </div>
+      ) : conversation.status === "connecting" ? (
+        <div className="flex flex-col items-center gap-4">
+          <div className="font-pixel text-xs" style={{ color }}>
+            CONNECTING...
+          </div>
         </div>
       ) : (
         <div className="flex flex-col items-center gap-4">
