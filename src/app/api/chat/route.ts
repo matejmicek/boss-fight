@@ -2,6 +2,7 @@ import { anthropic } from "@ai-sdk/anthropic";
 import { convertToModelMessages, streamText } from "ai";
 import { z } from "zod";
 import { createClient } from "@/utils/supabase/server";
+import { renderDeckForPrompt } from "@/lib/deck";
 
 export async function POST(req: Request) {
   const { messages, system, levelId, playerId } = await req.json();
@@ -12,9 +13,11 @@ export async function POST(req: Request) {
 
   const supabase = await createClient();
 
+  const effectiveSystem = `[PITCH CONTEXT — this is the deck the founder submitted]\n${renderDeckForPrompt()}\n\n[YOUR ROLE]\n${system}`;
+
   const result = streamText({
     model: anthropic("claude-sonnet-4-6"),
-    system,
+    system: effectiveSystem,
     messages: await convertToModelMessages(messages),
     maxOutputTokens: 300,
     maxRetries: 3,
