@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
-import { Level } from "@/lib/types";
+import { Level, MAX_ATTEMPTS_PER_LEVEL } from "@/lib/types";
 import { getLevelColor, LEVEL_TYPE_LABELS } from "@/lib/levels";
 
 interface MyScores {
@@ -136,9 +136,8 @@ export function LevelSelect({
         {levels.map((level) => {
           const color = getLevelColor(level);
           const info = scores[level.id];
-          const maxAttempts = 2;
           const attemptsUsed = info?.attempts ?? 0;
-          const noRetries = attemptsUsed >= maxAttempts;
+          const noRetries = attemptsUsed >= MAX_ATTEMPTS_PER_LEVEL;
           const locked = !level.unlocked || noRetries;
           const typeLabel = LEVEL_TYPE_LABELS[level.type] || level.type.toUpperCase();
 
@@ -187,7 +186,7 @@ export function LevelSelect({
                         BEST: {info.best}/10
                       </div>
                       <div className="text-zinc-600 text-[10px] mt-1">
-                        {attemptsUsed}/{maxAttempts} TRIES
+                        {attemptsUsed}/{MAX_ATTEMPTS_PER_LEVEL} TRIES
                       </div>
                     </>
                   ) : level.unlocked && pendingLevelId === level.id ? (

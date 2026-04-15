@@ -35,20 +35,27 @@ CREATE OR REPLACE VIEW leaderboard AS
 SELECT
   p.id AS player_id,
   p.name,
-  COALESCE(SUM(best.best_score), 0)::integer AS total,
+  COALESCE(SUM(agg.best_score), 0)::integer AS total,
   COALESCE(
     json_agg(
-      json_build_object('level_id', best.level_id, 'score', best.best_score)
-    ) FILTER (WHERE best.level_id IS NOT NULL),
+      json_build_object(
+        'level_id', agg.level_id,
+        'score', agg.best_score,
+        'attempts', agg.attempts
+      )
+    ) FILTER (WHERE agg.level_id IS NOT NULL),
     '[]'::json
   ) AS level_scores
 FROM players p
 LEFT JOIN LATERAL (
-  SELECT s.level_id, MAX(s.score) AS best_score
+  SELECT
+    s.level_id,
+    MAX(s.score) AS best_score,
+    COUNT(*)::integer AS attempts
   FROM scores s
   WHERE s.player_id = p.id
   GROUP BY s.level_id
-) best ON true
+) agg ON true
 GROUP BY p.id, p.name;
 
 -- Seed Level 1: The Analyst

@@ -1,19 +1,3 @@
-export type Blank = { blank: true; label: string; hint: string };
-
-const blank = (label: string, hint: string): Blank => ({
-  blank: true,
-  label,
-  hint,
-});
-
-export type Slide =
-  | { kind: "cover"; company: string; tagline: string; round: string }
-  | { kind: "bullets"; title: string; bullets: string[] }
-  | { kind: "paragraph"; title: string; paragraph: string; features?: string[] }
-  | { kind: "grid"; title: string; items: { value: string; label: string }[] }
-  | { kind: "team"; title: string; members: (TeamMember | Blank)[] }
-  | { kind: "blank"; title: string; blank: Blank };
-
 export type TeamMember = { name: string; role: string; bio: string };
 
 export const deck = {
@@ -23,112 +7,65 @@ export const deck = {
 
   problem: [
     "Home cooking is lonely. You put real effort in and nobody sees it.",
-    "Progress is invisible. There is no record of the 400 meals you cooked this year.",
-    "Instagram and TikTok reward performance, not practice. The home cook has no home.",
+    "Progress is invisible. There is no record of the 400 meals you cooked last year.",
+    "Instagram and TikTok reward food performance, not practice. The home cook has no home.",
     "Calorie trackers treat food as a number. Cooking is a craft, not a macro.",
   ],
 
-  solution: {
+  product: {
     paragraph:
-      "Open the app. Snap your plate. We auto-tag the cuisine, technique, and difficulty. Your feed shows what your friends cooked today. Weekly segments, streaks, kudos — all the primitives that made Strava a habit, applied to the kitchen.",
+      "Mise is a social iOS app for home cooks. You snap a photo of your plate, our vision model auto-tags the cuisine, technique, and cook time, and your friends see what you cooked today. That's the MVP. It's live and shipping.",
     features: [
-      "One-tap photo log. AI does the rest.",
-      "Friend feed, weekly segments, streaks, kudos.",
-      "Private by default. You choose what you share.",
+      "One-tap photo log. Vision model auto-tags cuisine, technique, difficulty.",
+      "Friend feed of what people are cooking today.",
+      "Weekly segments (e.g. \"best pasta this week in your city\"), streaks, kudos.",
+      "iOS only. 3,100 on the Android waitlist.",
     ],
   },
 
-  whyNow: [
-    "Home-cooking habits locked in post-2020 and did not unwind.",
-    "Gen Z cooks more at home than boomers for the first time ever.",
-    "Vision AI can now identify a plated dish from one photo. This was not true 18 months ago.",
-  ],
-
-  market: [
-    "3.9B people cook at home weekly. 380M post food content somewhere online.",
-    "Consumer food + beverage apps: $24B by 2028 (Statista).",
-    "Commerce adjacencies — groceries, cookware, classes, booking — are each >$50B markets our social graph eventually touches.",
+  traction: [
+    { value: "$4.2K", label: "MRR" },
+    { value: "2,800", label: "Weekly active cooks" },
+    { value: "41%", label: "D30 retention" },
+    { value: "14,200", label: "Meals logged to date" },
   ],
 
   team: [
     {
       name: "Maya Chen",
-      role: "CEO",
-      bio: "Stanford CS '24. Ex-Strava PM (activity feed team). Obsessive home cook, 600+ meals logged in her own prototype over 14 months.",
+      role: "CEO & Co-founder",
+      bio: "Stanford CS '24. Ex-Strava PM (activity feed team, 2023). Obsessive home cook — 600+ meals logged in a private prototype before starting Mise.",
     },
-    blank(
-      "Co-founder",
-      "Your CTO / second founder. Name, background, domain edge, why the two of you."
-    ),
+    {
+      name: "Sam Okafor",
+      role: "CTO & Co-founder",
+      bio: "UC Berkeley EECS '22. Ex-Google (Lens / Photos, 2022-2025) — shipped the food-identification model now used in Google Photos search. Built Mise's vision pipeline from scratch.",
+    },
+  ] as TeamMember[],
+
+  market: [
+    "3.9B people cook at home weekly. 380M already post food content somewhere online.",
+    "Consumer food & beverage apps: $24B by 2028 (Statista).",
+    "Vision models can now identify a plated dish from one photo. Eighteen months ago this was not true.",
   ],
-
-  vision:
-    "Mise starts as a tracker. It becomes the social graph for taste. It ends as the identity layer for food — your passport across groceries, cookware, classes, and restaurants.",
-
-  tractionBlank: blank(
-    "Traction",
-    "Your MRR, weekly active cooks, D30 retention, waitlist. Pick numbers you can defend."
-  ),
-
-  wedgeBlank: blank(
-    "Wedge",
-    "Your initial niche and the insight that only you have. BBQ subreddit? NYC pasta TikTok? Eastern-European home chefs? Something else?"
-  ),
-
-  gtmBlank: blank(
-    "Go-to-market",
-    "How the first 10k cooks arrive. Community-led? Creator-led? Paid? Partnerships? Be specific."
-  ),
-
-  businessModelBlank: blank(
-    "Business model",
-    "Your pricing tiers and eventual commerce take rate. Where does $1 of value become $1 of revenue?"
-  ),
-
-  askBlank: blank(
-    "The ask",
-    "Your round size, valuation posture, and allocation (eng / GTM / ops). Be ready to defend each bucket."
-  ),
 } as const;
 
-export function renderDeckForPrompt(): string {
+export function renderAnalystPreread(): string {
   const d = deck;
   const lines: string[] = [];
-  lines.push(`COMPANY: ${d.company}`);
-  lines.push(`TAGLINE: ${d.tagline}`);
+  lines.push("[Pre-read — this is all you had time to skim before the call.]");
   lines.push("");
-  lines.push("PROBLEM:");
-  d.problem.forEach((p) => lines.push(`- ${p}`));
-  lines.push("");
-  lines.push("SOLUTION:");
-  lines.push(d.solution.paragraph);
-  d.solution.features.forEach((f) => lines.push(`- ${f}`));
-  lines.push("");
-  lines.push("WHY NOW:");
-  d.whyNow.forEach((w) => lines.push(`- ${w}`));
-  lines.push("");
-  lines.push("MARKET:");
-  d.market.forEach((m) => lines.push(`- ${m}`));
-  lines.push("");
-  lines.push("VISION:");
-  lines.push(d.vision);
-  lines.push("");
-  lines.push("TEAM:");
-  d.team.forEach((member) => {
-    if ("blank" in member) {
-      lines.push(`- [FOUNDER FILLS IN LIVE — ${member.label}: ${member.hint}]`);
-    } else {
-      lines.push(`- ${member.name} (${member.role}): ${member.bio}`);
-    }
+  d.team.forEach((m) => {
+    lines.push(`LinkedIn — ${m.name}`);
+    lines.push(`  Title: ${m.role}, ${d.company}`);
+    lines.push(`  ${m.bio}`);
+    lines.push("");
   });
+  lines.push(`From ${d.company.toLowerCase()}.app (website blurb):`);
+  lines.push(`  "${d.company} — ${d.tagline}. ${d.product.paragraph.split(".")[0]}."`);
   lines.push("");
-  lines.push("TEAM-SPECIFIC VARIABLES (the founder fills these in live during the call — do not assume, probe):");
-  [
-    d.tractionBlank,
-    d.wedgeBlank,
-    d.gtmBlank,
-    d.businessModelBlank,
-    d.askBlank,
-  ].forEach((b) => lines.push(`- ${b.label}: ${b.hint}`));
+  lines.push(
+    "You have not seen a deck. You do not know their traction numbers, market sizing, pricing, wedge, or vision. Ask."
+  );
   return lines.join("\n");
 }

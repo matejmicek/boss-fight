@@ -27,5 +27,7 @@ export interface LeaderboardEntry {
   player_id: string;
   name: string;
   total: number;
-  level_scores: { level_id: number; score: number }[];
+  level_scores: { level_id: number; score: number; attempts: number }[];
 }
+
+export const MAX_ATTEMPTS_PER_LEVEL = 2;

@@ -7,8 +7,11 @@ import { LevelSelect } from "@/components/level-select";
 import { ChatLevel } from "@/components/chat-level";
 import { VoiceLevel } from "@/components/voice-level";
 import { Leaderboard } from "@/components/leaderboard";
+import { HowToPlay } from "@/components/how-to-play";
 
 type Screen = "level-select" | "playing" | "leaderboard";
+
+const HOWTO_FLAG = "boss-fight-seen-howto";
 
 export default function Home() {
   const [playerId, setPlayerId] = useState<string | null>(null);
@@ -16,6 +19,7 @@ export default function Home() {
   const [screen, setScreen] = useState<Screen>("level-select");
   const [activeLevel, setActiveLevel] = useState<Level | null>(null);
   const [pendingLevelId, setPendingLevelId] = useState<number | null>(null);
+  const [showHowTo, setShowHowTo] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem("boss-fight-player");
@@ -30,19 +34,38 @@ export default function Home() {
     setPlayerId(id);
     setPlayerName(name);
     localStorage.setItem("boss-fight-player", JSON.stringify({ id, name }));
+    if (!localStorage.getItem(HOWTO_FLAG)) {
+      setShowHowTo(true);
+    }
+  }
+
+  function handleDismissHowTo() {
+    localStorage.setItem(HOWTO_FLAG, "1");
+    setShowHowTo(false);
   }
 
   function handleReset() {
     localStorage.removeItem("boss-fight-player");
+    localStorage.removeItem(HOWTO_FLAG);
     setPlayerId(null);
     setPlayerName(null);
     setScreen("level-select");
     setActiveLevel(null);
     setPendingLevelId(null);
+    setShowHowTo(false);
   }
 
   if (!playerId) {
     return <Lobby onJoin={handleJoin} />;
+  }
+
+  if (showHowTo) {
+    return (
+      <HowToPlay
+        playerName={playerName ?? ""}
+        onContinue={handleDismissHowTo}
+      />
+    );
   }
 
   if (screen === "leaderboard") {
