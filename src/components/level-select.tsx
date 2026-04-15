@@ -11,13 +11,17 @@ interface MyScores {
 
 export function LevelSelect({
   playerId,
+  playerName,
   onSelect,
   onLeaderboard,
+  onReset,
   pendingLevelId,
 }: {
   playerId: string;
+  playerName?: string | null;
   onSelect: (level: Level) => void;
   onLeaderboard: () => void;
+  onReset: () => void;
   pendingLevelId?: number | null;
 }) {
   const [levels, setLevels] = useState<Level[]>([]);
@@ -87,13 +91,40 @@ export function LevelSelect({
 
   return (
     <div className="flex flex-col min-h-screen p-4 scanlines">
-      <div className="flex justify-end items-center mb-6">
-        <button
-          onClick={onLeaderboard}
-          className="font-pixel text-[10px] text-zinc-500 hover:text-white transition-colors"
-        >
-          [ LEADERBOARD ]
-        </button>
+      <div className="flex justify-between items-center mb-6">
+        <div className="font-pixel text-[10px] text-zinc-600">
+          {playerName ? playerName.toUpperCase() : ""}
+        </div>
+        <div className="flex items-center gap-4">
+          <a
+            href="/deck"
+            target="_blank"
+            rel="noreferrer"
+            className="font-pixel text-[10px] text-zinc-500 hover:text-white transition-colors"
+          >
+            [ DECK ]
+          </a>
+          <button
+            onClick={onLeaderboard}
+            className="font-pixel text-[10px] text-zinc-500 hover:text-white transition-colors"
+          >
+            [ LEADERBOARD ]
+          </button>
+          <button
+            onClick={() => {
+              if (
+                window.confirm(
+                  "Reset? You'll go back to the name screen and start a fresh player."
+                )
+              ) {
+                onReset();
+              }
+            }}
+            className="font-pixel text-[10px] text-red-500 hover:text-red-300 transition-colors"
+          >
+            [ RESET ]
+          </button>
+        </div>
       </div>
 
       <h2 className="font-pixel text-lg mb-1 text-center">SELECT LEVEL</h2>

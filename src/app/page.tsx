@@ -32,6 +32,15 @@ export default function Home() {
     localStorage.setItem("boss-fight-player", JSON.stringify({ id, name }));
   }
 
+  function handleReset() {
+    localStorage.removeItem("boss-fight-player");
+    setPlayerId(null);
+    setPlayerName(null);
+    setScreen("level-select");
+    setActiveLevel(null);
+    setPendingLevelId(null);
+  }
+
   if (!playerId) {
     return <Lobby onJoin={handleJoin} />;
   }
@@ -79,6 +88,7 @@ export default function Home() {
   return (
     <LevelSelect
       playerId={playerId}
+      playerName={playerName}
       pendingLevelId={pendingLevelId}
       onSelect={(level) => {
         setPendingLevelId(null);
@@ -86,6 +96,7 @@ export default function Home() {
         setScreen("playing");
       }}
       onLeaderboard={() => setScreen("leaderboard")}
+      onReset={handleReset}
     />
   );
 }
