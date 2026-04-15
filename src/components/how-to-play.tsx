@@ -49,7 +49,11 @@ export function HowToPlay({
             </li>
             <li>
               <span className="text-white font-semibold">Level 2 — Partner.</span>{" "}
-              Voice call with Marcus Reeves, the partner. Close the round.
+              Voice call with Marcus Reeves, the partner. Get him to take you
+              to the investment committee.
+            </li>
+            <li className="text-zinc-500">
+              More levels coming.
             </li>
           </ul>
         </Section>
