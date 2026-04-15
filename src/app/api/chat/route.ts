@@ -13,7 +13,7 @@ export async function POST(req: Request) {
 
   const supabase = await createClient();
 
-  const effectiveSystem = `[PRE-READ — the founder's LinkedIn + the website blurb you skimmed before the call. You have NOT seen a deck.]\n${renderAnalystPreread()}\n\n[YOUR ROLE]\n${system}`;
+  const effectiveSystem = `[SCENE — a founder just cold-DM'd you on LinkedIn. You clicked their profile and took 90 seconds on the website. This chat IS that LinkedIn DM thread. No deck, no intro from anyone you trust, no prior call.]\n\n[WHAT YOU SKIMMED]\n${renderAnalystPreread()}\n\n[YOUR ROLE]\n${system}`;
 
   const result = streamText({
     model: anthropic("claude-sonnet-4-6"),

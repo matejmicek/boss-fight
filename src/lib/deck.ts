@@ -53,19 +53,17 @@ export const deck = {
 export function renderAnalystPreread(): string {
   const d = deck;
   const lines: string[] = [];
-  lines.push("[Pre-read — this is all you had time to skim before the call.]");
-  lines.push("");
   d.team.forEach((m) => {
-    lines.push(`LinkedIn — ${m.name}`);
+    lines.push(`LinkedIn profile — ${m.name}`);
     lines.push(`  Title: ${m.role}, ${d.company}`);
     lines.push(`  ${m.bio}`);
     lines.push("");
   });
-  lines.push(`From ${d.company.toLowerCase()}.app (website blurb):`);
+  lines.push(`Homepage blurb — ${d.company.toLowerCase()}.app (skimmed after the DM landed):`);
   lines.push(`  "${d.company} — ${d.tagline}. ${d.product.paragraph.split(".")[0]}."`);
   lines.push("");
   lines.push(
-    "You have not seen a deck. You do not know their traction numbers, market sizing, pricing, wedge, or vision. Ask."
+    "That's everything you know. No traction numbers, no market sizing, no pricing, no vision, no ask. Those are exactly the things you want to pull out of this chat."
   );
   return lines.join("\n");
 }
