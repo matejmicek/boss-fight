@@ -15,6 +15,7 @@ import { Level } from "@/lib/types";
 import { getLevelColor } from "@/lib/levels";
 import { createClient } from "@/utils/supabase/client";
 import { CoachHint } from "./coach-hint";
+import { LiveScore } from "./live-score";
 import { ScoreReveal } from "./score-reveal";
 
 export function ChatLevel(props: {
@@ -89,6 +90,9 @@ function ChatLevelInner({
     transport,
   });
 
+  const [hint, setHint] = useState<string | null>(null);
+  const [score, setScore] = useState<number | null>(null);
+
   return (
     <AssistantRuntimeProvider runtime={runtime}>
       <div className="flex flex-col h-screen">
@@ -99,18 +103,23 @@ function ChatLevelInner({
           <div className="font-pixel text-xs" style={{ color }}>
             {level.name.toUpperCase()}
           </div>
-          <a
-            href="/deck"
-            target="_blank"
-            className="text-zinc-500 hover:text-white transition-colors text-xs"
-          >
-            [ DECK ]
-          </a>
+          <div className="flex items-center gap-4">
+            <LiveScore score={score} color={color} />
+            <a
+              href="/deck"
+              target="_blank"
+              className="text-zinc-500 hover:text-white transition-colors text-xs"
+            >
+              [ DECK ]
+            </a>
+          </div>
         </div>
 
         <div className="px-4 py-3 border-b border-zinc-900 flex justify-center">
-          <ChatCoach color={color} />
+          <CoachHint hint={hint} color={color} />
         </div>
+
+        <ConversationWatcher onHint={setHint} onScore={setScore} />
 
         <div className="flex-1 overflow-hidden">
           <Thread />
@@ -142,8 +151,13 @@ function extractText(msg: AuiMessage): string {
     .trim();
 }
 
-function ChatCoach({ color }: { color: string }) {
-  const [hint, setHint] = useState<string | null>(null);
+function ConversationWatcher({
+  onHint,
+  onScore,
+}: {
+  onHint: (h: string) => void;
+  onScore: (s: number) => void;
+}) {
   const messages = useAuiState(
     (s) => s.thread.messages as unknown as ReadonlyArray<AuiMessage>
   );
@@ -152,7 +166,6 @@ function ChatCoach({ color }: { color: string }) {
 
   useEffect(() => {
     if (!messages || messages.length === 0) return;
-    // Find the most recent user message
     let lastUser: AuiMessage | undefined;
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i].role === "user") {
@@ -178,24 +191,38 @@ function ChatCoach({ color }: { color: string }) {
       }))
       .filter((t) => t.text);
 
-    fetch("/api/coach", {
+    const coachReq = fetch("/api/coach", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ role: "analyst", transcript }),
     })
       .then((r) => r.json())
       .then((d) => {
-        if (typeof d?.hint === "string") setHint(d.hint);
+        if (typeof d?.hint === "string") onHint(d.hint);
       })
       .catch(() => {
         /* ignore */
-      })
-      .finally(() => {
-        inFlightRef.current = false;
       });
-  }, [messages]);
 
-  return <CoachHint hint={hint} color={color} />;
+    const scoreReq = fetch("/api/score", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transcript }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (typeof d?.score === "number") onScore(d.score);
+      })
+      .catch(() => {
+        /* ignore */
+      });
+
+    Promise.all([coachReq, scoreReq]).finally(() => {
+      inFlightRef.current = false;
+    });
+  }, [messages, onHint, onScore]);
+
+  return null;
 }
 
 function ChatLevelFooter({
