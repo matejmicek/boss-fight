@@ -44,17 +44,21 @@ export function HowToPlay({
           <ul className="space-y-3">
             <li>
               <span className="text-white font-semibold">Level 1 — Analyst.</span>{" "}
-              LinkedIn chat with Sarah Chen, a VC analyst. Convince her to
-              forward you to the partner.
+              Short LinkedIn pre-screen with Sarah Chen. She&apos;ll probe three
+              things and decide. Get her to forward you to Marcus.
             </li>
             <li>
               <span className="text-white font-semibold">Level 2 — Partner.</span>{" "}
-              Voice call with Marcus Reeves, the partner. Get him to take you
-              to the investment committee.
+              Voice call with Marcus Reeves. He&apos;s driving, he&apos;s late,
+              Sarah already briefed him. Make him want to walk this to IC.
             </li>
             <li className="text-zinc-500">
-              More levels coming.
+              <span className="text-zinc-400 font-semibold">
+                Level 3 — Valuation.
+              </span>{" "}
+              Negotiate the term sheet. Coming soon.
             </li>
+            <li className="text-zinc-500">More levels coming.</li>
           </ul>
         </Section>
 
@@ -68,6 +72,12 @@ export function HowToPlay({
               Each conversation is scored{" "}
               <span className="text-white font-semibold">0 - 10</span> by the VC
               who just talked to you.
+            </li>
+            <li>
+              A silent{" "}
+              <span className="text-white font-semibold">coach</span> watches
+              each conversation and drops a 2-3 word hint above the chat.
+              Listen to them.
             </li>
             <li>
               Your{" "}

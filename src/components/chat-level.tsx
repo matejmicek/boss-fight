@@ -1,39 +1,92 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { UIMessage } from "ai";
 import {
   AssistantRuntimeProvider,
-  useAssistantRuntime,
+  useAuiState,
 } from "@assistant-ui/react";
-import { useChatRuntime, AssistantChatTransport } from "@assistant-ui/react-ai-sdk";
+import {
+  useChatRuntime,
+  AssistantChatTransport,
+} from "@assistant-ui/react-ai-sdk";
 import { Thread } from "@/components/assistant-ui/thread";
 import { Level } from "@/lib/types";
 import { getLevelColor } from "@/lib/levels";
 import { createClient } from "@/utils/supabase/client";
+import { CoachHint } from "./coach-hint";
+import { ScoreReveal } from "./score-reveal";
 
-export function ChatLevel({
-  playerId,
-  level,
-  onBack,
-  onComplete,
-}: {
+export function ChatLevel(props: {
   playerId: string;
   level: Level;
   onBack: () => void;
   onComplete: (score: number) => void;
 }) {
+  const [initialMessages, setInitialMessages] = useState<UIMessage[] | null>(
+    null
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(
+      `/api/conversations/active?playerId=${props.playerId}&levelId=${props.level.id}`
+    )
+      .then((r) => (r.ok ? r.json() : { messages: [] }))
+      .then((d) => {
+        if (cancelled) return;
+        const msgs = Array.isArray(d?.messages) ? d.messages : [];
+        setInitialMessages(msgs as UIMessage[]);
+      })
+      .catch(() => {
+        if (!cancelled) setInitialMessages([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [props.playerId, props.level.id]);
+
+  if (initialMessages === null) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="font-pixel text-xs text-zinc-500 animate-pulse">
+          LOADING...
+        </p>
+      </div>
+    );
+  }
+
+  return <ChatLevelInner {...props} initialMessages={initialMessages} />;
+}
+
+function ChatLevelInner({
+  playerId,
+  level,
+  onBack,
+  onComplete,
+  initialMessages,
+}: {
+  playerId: string;
+  level: Level;
+  onBack: () => void;
+  onComplete: (score: number) => void;
+  initialMessages: UIMessage[];
+}) {
   const color = getLevelColor(level);
   const systemPrompt = level.config.system_prompt || "";
 
+  const transport = useMemo(
+    () =>
+      new AssistantChatTransport({
+        api: "/api/chat",
+        body: { system: systemPrompt, levelId: level.id, playerId },
+      }),
+    [systemPrompt, level.id, playerId]
+  );
+
   const runtime = useChatRuntime({
-    transport: new AssistantChatTransport({
-      api: "/api/chat",
-      body: {
-        system: systemPrompt,
-        levelId: level.id,
-        playerId,
-      },
-    }),
+    messages: initialMessages,
+    transport,
   });
 
   return (
@@ -55,6 +108,10 @@ export function ChatLevel({
           </a>
         </div>
 
+        <div className="px-4 py-3 border-b border-zinc-900 flex justify-center">
+          <ChatCoach color={color} />
+        </div>
+
         <div className="flex-1 overflow-hidden">
           <Thread />
         </div>
@@ -71,6 +128,76 @@ export function ChatLevel({
   );
 }
 
+type AuiMessage = {
+  id: string;
+  role: "user" | "assistant" | "system";
+  content: ReadonlyArray<{ type: string; text?: string }>;
+};
+
+function extractText(msg: AuiMessage): string {
+  return msg.content
+    .filter((p) => p.type === "text" && typeof p.text === "string")
+    .map((p) => p.text as string)
+    .join(" ")
+    .trim();
+}
+
+function ChatCoach({ color }: { color: string }) {
+  const [hint, setHint] = useState<string | null>(null);
+  const messages = useAuiState(
+    (s) => s.thread.messages as unknown as ReadonlyArray<AuiMessage>
+  );
+  const lastProcessedRef = useRef<string | null>(null);
+  const inFlightRef = useRef(false);
+
+  useEffect(() => {
+    if (!messages || messages.length === 0) return;
+    // Find the most recent user message
+    let lastUser: AuiMessage | undefined;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "user") {
+        lastUser = messages[i];
+        break;
+      }
+    }
+    if (!lastUser) return;
+    if (lastUser.id === lastProcessedRef.current) return;
+    if (inFlightRef.current) return;
+
+    const text = extractText(lastUser);
+    if (!text) return;
+
+    lastProcessedRef.current = lastUser.id;
+    inFlightRef.current = true;
+
+    const transcript = messages
+      .filter((m) => m.role === "user" || m.role === "assistant")
+      .map((m) => ({
+        role: m.role === "user" ? ("user" as const) : ("assistant" as const),
+        text: extractText(m),
+      }))
+      .filter((t) => t.text);
+
+    fetch("/api/coach", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role: "analyst", transcript }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (typeof d?.hint === "string") setHint(d.hint);
+      })
+      .catch(() => {
+        /* ignore */
+      })
+      .finally(() => {
+        inFlightRef.current = false;
+      });
+  }, [messages]);
+
+  return <CoachHint hint={hint} color={color} />;
+}
+
 function ChatLevelFooter({
   playerId,
   levelId,
@@ -84,7 +211,6 @@ function ChatLevelFooter({
   onBack: () => void;
   onComplete: (score: number) => void;
 }) {
-  const runtime = useAssistantRuntime();
   const [completed, setCompleted] = useState<{ score: number } | null>(null);
 
   useEffect(() => {
@@ -115,23 +241,13 @@ function ChatLevelFooter({
 
   if (completed) {
     return (
-      <div className="flex flex-col items-center justify-center p-6 border-t border-zinc-800">
-        <div className="font-pixel text-xl mb-2" style={{ color: "#ffd700" }}>
-          LEVEL COMPLETE
-        </div>
-        <div className="text-4xl font-bold" style={{ color: "#ffd700" }}>
-          {completed.score}/10
-        </div>
-        <button
-          onClick={() => {
-            onComplete(completed.score);
-            onBack();
-          }}
-          className="mt-6 px-6 py-3 border-2 border-zinc-700 hover:border-zinc-500 transition-colors text-xs pixel-btn"
-        >
-          CONTINUE
-        </button>
-      </div>
+      <ScoreReveal
+        score={completed.score}
+        onContinue={() => {
+          onComplete(completed.score);
+          onBack();
+        }}
+      />
     );
   }
 
@@ -144,7 +260,10 @@ function ChatLevelFooter({
       >
         QUIT
       </button>
-      <div className="font-pixel text-[10px] text-zinc-600" style={{ color: color + "80" }}>
+      <div
+        className="font-pixel text-[10px] text-zinc-600"
+        style={{ color: color + "80" }}
+      >
         CONVINCE THEM
       </div>
     </div>
