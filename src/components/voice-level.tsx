@@ -101,18 +101,26 @@ function VoiceLevelInner({
     }
   }, [agentId, conversation, playerId, level.id]);
 
-  // Hang up cleanly on unmount so ElevenLabs doesn't keep the session alive.
+  // Hang up cleanly on real unmount so ElevenLabs doesn't keep the session
+  // alive. We must NOT put `conversation` in the dep array — useConversation()
+  // returns a new object identity on every render, which would fire this
+  // cleanup on every re-render mid-call and kill the session 4 seconds in.
+  const conversationRef = useRef(conversation);
+  useEffect(() => {
+    conversationRef.current = conversation;
+  }, [conversation]);
   useEffect(() => {
     return () => {
-      if (conversation.status === "connected") {
+      const c = conversationRef.current;
+      if (c && c.status === "connected") {
         try {
-          conversation.endSession();
+          c.endSession();
         } catch {
           /* ignore */
         }
       }
     };
-  }, [conversation]);
+  }, []);
 
   // After the call ends, wait for the webhook score to arrive.
   useEffect(() => {
