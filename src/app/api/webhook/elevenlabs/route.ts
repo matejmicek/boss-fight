@@ -22,8 +22,11 @@ export async function POST(req: Request) {
   const playerId = dynamicVars.player_id;
   const levelId = parseInt(dynamicVars.level_id, 10);
 
-  // Guard: if the founder barely spoke (mid-call refresh, connection issue),
-  // don't burn an attempt. Require at least 3 non-empty user turns.
+  // Guard: drop obvious non-calls (instant refresh, mic-denied reconnects).
+  // Must be conservative — a real-but-brief call with "I need to end this
+  // now" should still be scored. Accept when either (a) the founder got
+  // meaningfully on the mic (≥2 non-empty user turns) OR (b) the call
+  // lasted ≥15s. Reject only when both signals are absent.
   const transcript: Array<{ role?: string; message?: string }> = Array.isArray(
     data?.transcript
   )
@@ -35,9 +38,11 @@ export async function POST(req: Request) {
       typeof t.message === "string" &&
       t.message.trim().length > 0
   );
-  if (userTurns.length < 3) {
-    console.log("webhook: skipping score — too few user turns", {
+  const durationSecs = Number(data?.metadata?.call_duration_secs ?? 0);
+  if (userTurns.length < 2 && durationSecs < 15) {
+    console.log("webhook: skipping score — too short", {
       userTurns: userTurns.length,
+      durationSecs,
     });
     return NextResponse.json({ ok: true, skipped: "too_short" });
   }
