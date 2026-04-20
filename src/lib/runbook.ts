@@ -201,17 +201,35 @@ export interface NegotiationResult {
   end_reason: "deal" | "associate_walk" | "vc_walk" | "turn_cap";
 }
 
-// Parse "$8M", "$8M pre", "8 million pre-money", "$8.5M" etc.
+// Parse valuation from negotiation text. Must distinguish valuation from
+// round-size mentions (the round is fixed at $2M and gets quoted often).
+// Strategy: try progressively looser patterns and skip numbers that match
+// the fixed round size.
 function extractFirstValuation(text: string): number | null {
   const patterns: RegExp[] = [
-    /\$?\s*(\d{1,3}(?:\.\d+)?)\s*[Mm](?:illion)?\s*(?:pre|pre-money)?/,
-    /(\d{1,3}(?:\.\d+)?)\s*[Mm](?:illion)?\s*(?:pre|pre-money)?/,
+    // Highest priority: "DEAL at $20M pre" / "DEAL at 20M"
+    /\bDEAL\s+at\s+\$?\s*(\d{1,3}(?:\.\d+)?)\s*[Mm](?:illion)?\s*(?:pre(?:-money)?)?/i,
+    // Valuation context: "$20M pre", "20M pre-money"
+    /\$?\s*(\d{1,3}(?:\.\d+)?)\s*[Mm](?:illion)?\s*pre(?:-money)?\b/i,
+    // Explicit "at $20M" closing language
+    /\b(?:at|for|done\s+at|land\s+at|locked\s+at)\s+\$?\s*(\d{1,3}(?:\.\d+)?)\s*[Mm]\b/i,
+    // Last resort: any $XM, but skip values matching the fixed round size
+    /\$\s*(\d{1,3}(?:\.\d+)?)\s*[Mm]\b/,
   ];
-  for (const re of patterns) {
-    const m = text.match(re);
-    if (m) {
+  const isRoundSize = (n: number) => Math.abs(n - ROUND_SIZE_M) < 0.1;
+  for (let i = 0; i < patterns.length; i++) {
+    const re = patterns[i];
+    // Iterate through all matches of the fallback pattern to skip round-size hits.
+    const isFallback = i === patterns.length - 1;
+    const iter = isFallback
+      ? text.matchAll(new RegExp(re.source, re.flags + "g"))
+      : [text.match(re)].filter(Boolean);
+    for (const m of iter) {
+      if (!m) continue;
       const n = parseFloat(m[1]);
-      if (!Number.isNaN(n) && n > 0 && n < 500) return Math.round(n * 10) / 10;
+      if (!Number.isFinite(n) || n <= 0 || n >= 500) continue;
+      if (isFallback && isRoundSize(n)) continue;
+      return Math.round(n * 10) / 10;
     }
   }
   return null;
