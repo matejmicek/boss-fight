@@ -6,6 +6,7 @@ import { Lobby } from "@/components/lobby";
 import { LevelSelect } from "@/components/level-select";
 import { ChatLevel } from "@/components/chat-level";
 import { VoiceLevel } from "@/components/voice-level";
+import { RunbookLevel } from "@/components/runbook-level";
 import { Leaderboard } from "@/components/leaderboard";
 import { HowToPlay } from "@/components/how-to-play";
 
@@ -99,6 +100,20 @@ export default function Home() {
           level={activeLevel}
           onBack={() => {
             setPendingLevelId(activeLevel.id);
+            setScreen("level-select");
+            setActiveLevel(null);
+          }}
+          onComplete={() => {}}
+        />
+      );
+    }
+
+    if (activeLevel.type === "negotiation") {
+      return (
+        <RunbookLevel
+          playerId={playerId}
+          level={activeLevel}
+          onBack={() => {
             setScreen("level-select");
             setActiveLevel(null);
           }}
