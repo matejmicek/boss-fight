@@ -1,9 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ConversationProvider, useConversation } from "@elevenlabs/react";
 import { Level } from "@/lib/types";
 import { getLevelColor } from "@/lib/levels";
+import { createClient } from "@/utils/supabase/client";
+import { CoachHint } from "./coach-hint";
+import { ScoreReveal } from "./score-reveal";
+
+type CoachTurn = { role: "user" | "assistant"; text: string };
 
 export function VoiceLevel(props: {
   playerId: string;
@@ -33,6 +38,32 @@ function VoiceLevelInner({
   const agentId = level.config.elevenlabs_agent_id as string;
   const [error, setError] = useState<string | null>(null);
   const [callEnded, setCallEnded] = useState(false);
+  const [hint, setHint] = useState<string | null>(null);
+  const [completed, setCompleted] = useState<{ score: number } | null>(null);
+  const transcriptRef = useRef<CoachTurn[]>([]);
+  const coachInFlightRef = useRef(false);
+
+  const fireCoach = useCallback(async () => {
+    if (coachInFlightRef.current) return;
+    if (transcriptRef.current.length === 0) return;
+    coachInFlightRef.current = true;
+    try {
+      const r = await fetch("/api/coach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          role: "partner",
+          transcript: transcriptRef.current,
+        }),
+      });
+      const d = await r.json();
+      if (typeof d?.hint === "string") setHint(d.hint);
+    } catch {
+      /* ignore */
+    } finally {
+      coachInFlightRef.current = false;
+    }
+  }, []);
 
   const conversation = useConversation({
     onConnect: () => setError(null),
@@ -40,14 +71,23 @@ function VoiceLevelInner({
       setCallEnded(true);
     },
     onError: (err) => console.warn("ElevenLabs error:", err),
+    onMessage: ({ message, source }) => {
+      if (!message) return;
+      const role: "user" | "assistant" = source === "user" ? "user" : "assistant";
+      transcriptRef.current = [
+        ...transcriptRef.current,
+        { role, text: message },
+      ].slice(-20);
+      if (role === "user") fireCoach();
+    },
   });
-
 
   const startCall = useCallback(async () => {
     setError(null);
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
-
+      transcriptRef.current = [];
+      setHint(null);
       await conversation.startSession({
         agentId,
         connectionType: "websocket",
@@ -61,22 +101,112 @@ function VoiceLevelInner({
     }
   }, [agentId, conversation, playerId, level.id]);
 
-  // When the call ends (user or agent hangs up), go back to level select
-  // The score will arrive via webhook -> supabase -> realtime on level select
+  // Hang up cleanly on unmount so ElevenLabs doesn't keep the session alive.
   useEffect(() => {
-    if (callEnded) {
-      onBack();
+    return () => {
+      if (conversation.status === "connected") {
+        try {
+          conversation.endSession();
+        } catch {
+          /* ignore */
+        }
+      }
+    };
+  }, [conversation]);
+
+  // After the call ends, wait for the webhook score to arrive.
+  useEffect(() => {
+    if (!callEnded) return;
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`vscore-${playerId}-${level.id}-${Date.now()}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "scores",
+          filter: `player_id=eq.${playerId}`,
+        },
+        (payload) => {
+          const row = payload.new as { level_id: number; score: number };
+          if (row.level_id === level.id) setCompleted({ score: row.score });
+        }
+      )
+      .subscribe();
+
+    const timeout = setTimeout(() => {
+      setCompleted((c) => c ?? { score: -1 });
+    }, 25000);
+
+    return () => {
+      clearTimeout(timeout);
+      supabase.removeChannel(channel);
+    };
+  }, [callEnded, playerId, level.id]);
+
+  if (completed) {
+    if (completed.score < 0) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen p-6 scanlines gap-6">
+          <div className="font-pixel text-xs" style={{ color }}>
+            SCORE UNAVAILABLE
+          </div>
+          <p className="text-zinc-500 text-xs max-w-xs text-center">
+            The call ended but we never got an evaluation. No attempt burned.
+          </p>
+          <button
+            onClick={onBack}
+            className="px-6 py-3 border-2 border-zinc-700 hover:border-zinc-500 transition-colors text-xs pixel-btn font-pixel"
+          >
+            BACK
+          </button>
+        </div>
+      );
     }
-  }, [callEnded, onBack]);
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-6 scanlines">
+        <ScoreReveal
+          score={completed.score}
+          onContinue={() => {
+            onComplete(completed.score);
+            onBack();
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (callEnded) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-6 scanlines gap-4">
+        <div
+          className="font-pixel text-xs animate-pulse"
+          style={{ color }}
+        >
+          ANALYZING CALL...
+        </div>
+        <p className="text-zinc-500 text-[10px] max-w-xs text-center">
+          Marcus is reviewing. Hang tight.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-6 scanlines">
       <div className="font-pixel text-xs mb-2" style={{ color }}>
         {level.name.toUpperCase()}
       </div>
-      <p className="text-zinc-500 text-xs mb-8 text-center">
+      <p className="text-zinc-500 text-xs mb-6 text-center">
         {level.description}
       </p>
+
+      {conversation.status === "connected" && (
+        <div className="mb-8">
+          <CoachHint hint={hint} color={color} />
+        </div>
+      )}
 
       {conversation.status === "connected" ? (
         <div className="flex flex-col items-center gap-6">
@@ -117,7 +247,9 @@ function VoiceLevelInner({
             START CALL
           </button>
           {error && (
-            <p className="text-red-500 text-xs text-center max-w-xs">{error}</p>
+            <p className="text-red-500 text-xs text-center max-w-xs">
+              {error}
+            </p>
           )}
         </div>
       )}

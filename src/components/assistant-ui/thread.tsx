@@ -163,8 +163,10 @@ const AssistantMessage: FC = () => {
         <MessagePrimitive.Parts>
           {({ part }) => {
             if (part.type === "text") return <MarkdownText />;
-            if (part.type === "tool-call")
+            if (part.type === "tool-call") {
+              if (part.toolName === "end_level") return null;
               return part.toolUI ?? <ToolFallback {...part} />;
+            }
             return null;
           }}
         </MessagePrimitive.Parts>

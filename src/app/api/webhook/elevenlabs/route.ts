@@ -22,6 +22,26 @@ export async function POST(req: Request) {
   const playerId = dynamicVars.player_id;
   const levelId = parseInt(dynamicVars.level_id, 10);
 
+  // Guard: if the founder barely spoke (mid-call refresh, connection issue),
+  // don't burn an attempt. Require at least 3 non-empty user turns.
+  const transcript: Array<{ role?: string; message?: string }> = Array.isArray(
+    data?.transcript
+  )
+    ? data.transcript
+    : [];
+  const userTurns = transcript.filter(
+    (t) =>
+      t.role === "user" &&
+      typeof t.message === "string" &&
+      t.message.trim().length > 0
+  );
+  if (userTurns.length < 3) {
+    console.log("webhook: skipping score — too few user turns", {
+      userTurns: userTurns.length,
+    });
+    return NextResponse.json({ ok: true, skipped: "too_short" });
+  }
+
   const evalScore = data?.analysis?.data_collection_results?.["Eval Score"];
   const score = evalScore?.value ?? 0;
   const justification = evalScore?.rationale ?? data?.analysis?.transcript_summary ?? null;
