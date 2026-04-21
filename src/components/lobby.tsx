@@ -69,13 +69,22 @@ export function Lobby({
           <p className="text-red-500 text-sm text-center">{error}</p>
         )}
 
-        <a
-          href="/deck"
-          target="_blank"
-          className="block text-center text-zinc-500 hover:text-white transition-colors text-xs mt-4"
-        >
-          [ VIEW STARTUP DECK ]
-        </a>
+        <div className="flex justify-center gap-4 mt-4">
+          <a
+            href="/deck"
+            target="_blank"
+            className="text-zinc-500 hover:text-white transition-colors text-xs"
+          >
+            [ STARTUP DECK ]
+          </a>
+          <a
+            href="/prompts"
+            target="_blank"
+            className="text-zinc-500 hover:text-white transition-colors text-xs"
+          >
+            [ HOW YOU&apos;RE SCORED ]
+          </a>
+        </div>
       </div>
     </div>
   );

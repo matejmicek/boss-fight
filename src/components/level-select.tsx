@@ -106,6 +106,14 @@ export function LevelSelect({
           >
             [ DECK ]
           </a>
+          <a
+            href="/prompts"
+            target="_blank"
+            rel="noreferrer"
+            className="font-pixel text-[10px] text-zinc-500 hover:text-white transition-colors"
+          >
+            [ SCORING ]
+          </a>
           <button
             onClick={() => {
               if (

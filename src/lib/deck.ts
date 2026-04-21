@@ -67,3 +67,35 @@ export function renderAnalystPreread(): string {
   );
   return lines.join("\n");
 }
+
+// Partner-level preread. Sarah already screened the founder, wrote notes, and
+// sent Marcus the deck. He skimmed it on the way to Venice. This is what he
+// knows coming in — product, team, traction, market, ask.
+export function renderPartnerPreread(): string {
+  const d = deck;
+  const lines: string[] = [];
+  lines.push(`Company: ${d.company}`);
+  lines.push(`Tagline: ${d.tagline}`);
+  lines.push(`Round: ${d.round}`);
+  lines.push("");
+  lines.push("Product:");
+  lines.push(`  ${d.product.paragraph}`);
+  d.product.features.forEach((f) => lines.push(`  - ${f}`));
+  lines.push("");
+  lines.push("Team:");
+  d.team.forEach((m) => {
+    lines.push(`  ${m.name} (${m.role})`);
+    lines.push(`    ${m.bio}`);
+  });
+  lines.push("");
+  lines.push("Traction (from Sarah's screen):");
+  d.traction.forEach((t) => lines.push(`  - ${t.value} ${t.label}`));
+  lines.push("");
+  lines.push("Market notes from the deck:");
+  d.market.forEach((m) => lines.push(`  - ${m}`));
+  lines.push("");
+  lines.push(
+    "You already know all of the above. Do not ask the founder what Mise is, what the product does, or who the team is — you read the deck. Your job is to pressure-test the VISION, DEFENSIBILITY, and TEAM-WHY-THIS-TEAM angles that aren't in the deck."
+  );
+  return lines.join("\n");
+}
