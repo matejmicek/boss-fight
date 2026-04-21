@@ -20,7 +20,7 @@ export function CoachHint({
     return () => clearTimeout(t);
   }, [hint]);
 
-  const display = hint ?? "GOOD LUCK";
+  const display = hint ?? "LEAD WITH ONE KILLER HOOK";
 
   return (
     <div
@@ -34,7 +34,7 @@ export function CoachHint({
         {label}
       </div>
       <div
-        className="font-pixel text-base sm:text-lg tracking-wider"
+        className="font-pixel text-sm sm:text-base tracking-wider leading-snug"
         style={{ color }}
       >
         {display}

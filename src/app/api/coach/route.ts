@@ -3,26 +3,43 @@ import { generateText } from "ai";
 
 type CoachTurn = { role: "user" | "assistant"; text: string };
 
-const SYSTEM = `You are a silent pitch coach watching a founder practice against a VC {role}. After the founder's latest message, output ONE hint of 1-3 words. ALL CAPS. No punctuation. No quotes. No explanation.
+const SYSTEM = `You are a silent pitch coach helping a founder practice against a VC {role}. You always coach what the founder should do in their NEXT message. Never grade the previous one.
 
-Good hints: QUANTIFY MARKET, NAME A CUSTOMER, SLOW DOWN, HOOK HARDER, DROP JARGON, ANSWER DIRECTLY, SHOW FIRE, CITE DATA, WHY YOU, ASK CLEARLY, BIGGER VISION, GET PERSONAL, BE BOLDER, LESS BUZZWORDS, SAY THE NUMBER.
+HOW TO PICK THE HINT:
+- If the VC's LAST message is a question or probe, the hint MUST be about answering THAT question well. The VC's latest ask is the single most important thing — always.
+- Only raise an issue from earlier in the transcript (e.g. a vague mission line, a buzzword the founder already used) if the VC has NOT yet asked a new question — or as a secondary priority when you have a question to address AND the earlier issue is catastrophic. When in doubt, coach for the current question.
+- Do not surface past flaws that the VC has already moved past.
 
-Bad (never): "good job", "try harder", multi-sentence advice.
+Output: ONE short imperative directive, 3 to 8 words, ALL CAPS. No punctuation except spaces. No quotes. No explanation.
 
-If the founder is doing well, output KEEP GOING.
+Two situations:
 
-{role_focus}
+1) OPENING (no founder message yet, or only a greeting so far): coach them on the VERY FIRST pitch line. They need a captivating hook. Examples:
+- LEAD WITH ONE KILLER HOOK
+- OPEN WITH THE CATEGORY IN ONE LINE
+- START WITH THE MOST UNFAIR FACT
 
-Output ONLY the hint.`;
+2) VC JUST SPOKE (last message is from the VC): coach how to answer THAT specific question well. Examples by topic:
+- Numbers question -> DROP CONCRETE METRICS NOW / WRAP NUMBERS IN A NARRATIVE
+- Market question -> SIZE IT BOTTOM UP WITH REAL USERS
+- Vision question -> PAINT THE TEN YEAR CATEGORY
+- Team question -> NAME YOUR UNFAIR INSIGHT
+- Defensibility -> SHOW WHAT COMPOUNDS OVER TIME
+
+Never: "good job", "keep going", past-tense feedback, vague praise, multi-sentence advice, generic "be clearer."
+
+Always imperative. Always forward-looking. Output ONLY the hint.
+
+{role_focus}`;
 
 const ROLE_FOCUS: Record<string, string> = {
   analyst:
-    "ANALYST focus: the founder should sound crisp on market size, traction numbers, team edge, wedge/moat, and the ask. Hint them toward SPECIFICS and NUMBERS.",
+    "ANALYST focus: Sarah cares about NUMBERS (traction, retention, revenue) and MARKET SIZE (bottom-up logic, real users). Coach the founder to be specific, back every number with a story, and never hand-wave TAM.",
   partner:
-    "PARTNER focus: the founder should sound convincing on big vision, personal origin/why-them, team magnetism, and world-changing narrative. Hint them toward CONVICTION, STORY, and BOLDNESS. Do not tell them to quantify or cite MRR — Marcus doesn't care.",
+    "PARTNER focus: Marcus cares about BIG VISION (category-defining outcome), LONG-TERM DEFENSIBILITY (what compounds), and WHY THIS TEAM WINS (unfair insight, obsession). Never hint at MRR or unit economics. Push toward conviction, story, and scale.",
 };
 
-const FALLBACK = "KEEP GOING";
+const FALLBACK = "WRITE YOUR STRONGEST OPENING HOOK";
 
 function sanitize(raw: string): string {
   const cleaned = raw
@@ -30,7 +47,7 @@ function sanitize(raw: string): string {
     .replace(/[^A-Z0-9\s]/g, " ")
     .trim();
   if (!cleaned) return FALLBACK;
-  const words = cleaned.split(/\s+/).slice(0, 3);
+  const words = cleaned.split(/\s+/).slice(0, 8);
   return words.join(" ");
 }
 
@@ -52,7 +69,7 @@ export async function POST(req: Request) {
     return Response.json({ hint: FALLBACK });
   }
 
-  if (!["analyst", "partner"].includes(role) || transcript.length === 0) {
+  if (!["analyst", "partner"].includes(role)) {
     return Response.json({ hint: FALLBACK });
   }
 
@@ -61,12 +78,17 @@ export async function POST(req: Request) {
     ROLE_FOCUS[role] ?? ""
   );
 
+  const transcriptBlock =
+    transcript.length === 0
+      ? "(No messages yet. The founder is about to send their first cold DM.)"
+      : renderTranscript(transcript);
+
   try {
     const { text } = await generateText({
       model: anthropic("claude-haiku-4-5"),
       system,
-      prompt: `Conversation so far:\n${renderTranscript(transcript)}\n\nOutput ONE hint (1-3 words, ALL CAPS). No punctuation.`,
-      maxOutputTokens: 12,
+      prompt: `Conversation so far:\n${transcriptBlock}\n\nThe founder is writing their NEXT message now. If the VC's most recent message is a question, your hint MUST help answer THAT question. Output ONE imperative hint (3-8 words, ALL CAPS). No punctuation.`,
+      maxOutputTokens: 32,
       maxRetries: 1,
     });
     return Response.json({ hint: sanitize(text) });

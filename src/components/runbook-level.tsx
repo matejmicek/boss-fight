@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Level } from "@/lib/types";
 import { getLevelColor } from "@/lib/levels";
 import { PERSONA_ORDER } from "@/lib/runbook";
@@ -13,7 +13,6 @@ interface RunbookForm {
   arg1: string;
   arg2: string;
   arg3: string;
-  floor_m: string;
 }
 
 const DRAFT_KEY = "boss-fight-runbook-draft";
@@ -44,7 +43,7 @@ export function RunbookLevel({
         }
       }
     }
-    return { vision: "", arg1: "", arg2: "", arg3: "", floor_m: "" };
+    return { vision: "", arg1: "", arg2: "", arg3: "" };
   });
 
   useEffect(() => {
@@ -53,15 +52,11 @@ export function RunbookLevel({
   }, [form]);
 
   const canSubmit = useMemo(() => {
-    const floor = parseInt(form.floor_m, 10);
     return (
       form.vision.trim().length > 0 &&
       form.arg1.trim().length > 0 &&
       form.arg2.trim().length > 0 &&
-      form.arg3.trim().length > 0 &&
-      Number.isFinite(floor) &&
-      floor >= 1 &&
-      floor <= 50
+      form.arg3.trim().length > 0
     );
   }, [form]);
 
@@ -79,7 +74,6 @@ export function RunbookLevel({
           runbook: {
             vision: form.vision.trim(),
             arguments: [form.arg1.trim(), form.arg2.trim(), form.arg3.trim()],
-            floor_m: parseInt(form.floor_m, 10),
           },
         }),
       });
@@ -150,6 +144,27 @@ export function RunbookLevel({
 
 // ---------- Cutscene ----------
 
+type Speaker = "JAMIE" | "YOU";
+type Line = { from: Speaker; text: string };
+
+// Jamie (junior associate) is on the left, panicking. The founder (YOU) is on
+// the right, reassuring from wherever they are.
+const CUTSCENE_LINES: ReadonlyArray<Line> = [
+  { from: "JAMIE", text: "wait. WAIT." },
+  { from: "JAMIE", text: "the 2pm VCs. you want ME to take them??" },
+  { from: "JAMIE", text: "i've been here 8 weeks" },
+  { from: "YOU", text: "jamie. breathe." },
+  { from: "YOU", text: "i'll send you a runbook. just stick to it." },
+  { from: "JAMIE", text: "WHAT RUNBOOK" },
+  { from: "YOU", text: "the one i'm about to send you." },
+];
+
+// Pacing: short pause before typing starts, longer "typing" for longer msgs
+// so short panicked bursts feel snappy and longer reassurances feel deliberate.
+function typingDurationMs(text: string): number {
+  return Math.min(1600, 400 + text.length * 22);
+}
+
 function Cutscene({
   color,
   onContinue,
@@ -159,20 +174,34 @@ function Cutscene({
   onContinue: () => void;
   onBack: () => void;
 }) {
-  const [step, setStep] = useState(0);
-  const lines = [
-    { from: "COO", text: "boss. ER. ski accident. you need to go NOW." },
-    { from: "COO", text: "the 3 VC calls at 2pm??" },
-    { from: "YOU", text: "jamie can cover" },
-    { from: "COO", text: "jamie??? the new associate??" },
-    { from: "YOU", text: "brief them. send runbook. i'll call from the hospital" },
-  ];
+  // visibleCount = number of committed message bubbles on screen.
+  // typing = the speaker currently "typing" the next message, or null.
+  const [visibleCount, setVisibleCount] = useState(0);
+  const [typing, setTyping] = useState<Speaker | null>(null);
+  const endRef = useRef<HTMLDivElement | null>(null);
 
+  // Drive the reveal sequence: show typing indicator → pause → commit message.
   useEffect(() => {
-    if (step >= lines.length) return;
-    const t = setTimeout(() => setStep((s) => s + 1), 1100);
-    return () => clearTimeout(t);
-  }, [step, lines.length]);
+    if (visibleCount >= CUTSCENE_LINES.length) return;
+    const next = CUTSCENE_LINES[visibleCount];
+    const gap = visibleCount === 0 ? 200 : 350;
+    const typingAt = setTimeout(() => setTyping(next.from), gap);
+    const revealAt = setTimeout(() => {
+      setTyping(null);
+      setVisibleCount((c) => c + 1);
+    }, gap + typingDurationMs(next.text));
+    return () => {
+      clearTimeout(typingAt);
+      clearTimeout(revealAt);
+    };
+  }, [visibleCount]);
+
+  // Keep the latest bubble in view as new ones arrive.
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [visibleCount, typing]);
+
+  const done = visibleCount >= CUTSCENE_LINES.length && !typing;
 
   return (
     <div className="min-h-screen p-6 scanlines flex flex-col">
@@ -190,41 +219,76 @@ function Cutscene({
 
       <div className="max-w-md mx-auto w-full flex-1 flex flex-col justify-center">
         <div className="font-pixel text-[10px] text-zinc-500 mb-3 text-center">
-          12:47 PM · SMS
+          1:47 PM · SMS
         </div>
-        <div className="space-y-2 min-h-[280px]">
-          {lines.slice(0, step + 1).map((l, i) => (
-            <div
-              key={i}
-              className={`flex ${l.from === "YOU" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-[75%] px-3 py-2 text-sm leading-snug ${
-                  l.from === "YOU"
-                    ? "bg-white text-black"
-                    : "bg-zinc-900 text-white border border-zinc-800"
-                }`}
-              >
-                <div className="font-pixel text-[8px] opacity-60 mb-1">
-                  {l.from}
-                </div>
-                {l.text}
-              </div>
-            </div>
+        <div className="space-y-2 min-h-[340px]">
+          {CUTSCENE_LINES.slice(0, visibleCount).map((l, i) => (
+            <Bubble key={i} line={l} />
           ))}
+          {typing && <TypingBubble from={typing} />}
+          <div ref={endRef} />
         </div>
 
         <button
           onClick={onContinue}
-          disabled={step < lines.length}
+          disabled={!done}
           className="mt-8 w-full py-3 font-pixel text-xs pixel-btn disabled:opacity-30"
           style={{
-            background: step >= lines.length ? color : "#222",
-            color: step >= lines.length ? "#000" : "#888",
+            background: done ? color : "#222",
+            color: done ? "#000" : "#888",
           }}
         >
-          {step >= lines.length ? "BRIEF JAMIE →" : "..."}
+          {done ? "BRIEF JAMIE →" : "..."}
         </button>
+      </div>
+    </div>
+  );
+}
+
+function Bubble({ line }: { line: Line }) {
+  const mine = line.from === "YOU";
+  return (
+    <div className={`flex ${mine ? "justify-end" : "justify-start"} bubble-in`}>
+      <div
+        className={`max-w-[75%] px-3 py-2 text-sm leading-snug ${
+          mine
+            ? "bg-white text-black"
+            : "bg-zinc-900 text-white border border-zinc-800"
+        }`}
+      >
+        <div className="font-pixel text-[8px] opacity-60 mb-1">{line.from}</div>
+        {line.text}
+      </div>
+    </div>
+  );
+}
+
+function TypingBubble({ from }: { from: Speaker }) {
+  const mine = from === "YOU";
+  return (
+    <div className={`flex ${mine ? "justify-end" : "justify-start"} bubble-in`}>
+      <div
+        className={`px-3 py-2 ${
+          mine
+            ? "bg-white text-black"
+            : "bg-zinc-900 text-white border border-zinc-800"
+        }`}
+      >
+        <div className="font-pixel text-[8px] opacity-60 mb-1">{from}</div>
+        <div className="flex gap-1 items-end h-3">
+          <span
+            className="w-1.5 h-1.5 rounded-full bg-current animate-bounce"
+            style={{ animationDelay: "0ms" }}
+          />
+          <span
+            className="w-1.5 h-1.5 rounded-full bg-current animate-bounce"
+            style={{ animationDelay: "150ms" }}
+          />
+          <span
+            className="w-1.5 h-1.5 rounded-full bg-current animate-bounce"
+            style={{ animationDelay: "300ms" }}
+          />
+        </div>
       </div>
     </div>
   );
@@ -314,25 +378,6 @@ function Briefing({
             maxLength={200}
             onChange={(v) => setForm((f) => ({ ...f, arg3: v }))}
           />
-
-          <div>
-            <label className="font-pixel text-[10px] text-zinc-400 mb-1 block">
-              VALUATION FLOOR ($M PRE-MONEY)
-            </label>
-            <div className="text-[11px] text-zinc-500 italic mb-2">
-              Below this, Jamie walks. Round size is fixed at $2M.
-            </div>
-            <input
-              type="number"
-              min={1}
-              max={50}
-              step={1}
-              value={form.floor_m}
-              onChange={(e) => setForm((f) => ({ ...f, floor_m: e.target.value }))}
-              placeholder="e.g. 8"
-              className="w-32 px-3 py-2 bg-zinc-950 border border-zinc-800 focus:border-white outline-none text-white font-pixel text-sm"
-            />
-          </div>
         </div>
 
         <button

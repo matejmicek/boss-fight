@@ -5,10 +5,7 @@ import { ConversationProvider, useConversation } from "@elevenlabs/react";
 import { Level } from "@/lib/types";
 import { getLevelColor } from "@/lib/levels";
 import { createClient } from "@/utils/supabase/client";
-import { CoachHint } from "./coach-hint";
 import { ScoreReveal } from "./score-reveal";
-
-type CoachTurn = { role: "user" | "assistant"; text: string };
 
 export function VoiceLevel(props: {
   playerId: string;
@@ -38,32 +35,7 @@ function VoiceLevelInner({
   const agentId = level.config.elevenlabs_agent_id as string;
   const [error, setError] = useState<string | null>(null);
   const [callEnded, setCallEnded] = useState(false);
-  const [hint, setHint] = useState<string | null>(null);
   const [completed, setCompleted] = useState<{ score: number } | null>(null);
-  const transcriptRef = useRef<CoachTurn[]>([]);
-  const coachInFlightRef = useRef(false);
-
-  const fireCoach = useCallback(async () => {
-    if (coachInFlightRef.current) return;
-    if (transcriptRef.current.length === 0) return;
-    coachInFlightRef.current = true;
-    try {
-      const r = await fetch("/api/coach", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          role: "partner",
-          transcript: transcriptRef.current,
-        }),
-      });
-      const d = await r.json();
-      if (typeof d?.hint === "string") setHint(d.hint);
-    } catch {
-      /* ignore */
-    } finally {
-      coachInFlightRef.current = false;
-    }
-  }, []);
 
   const conversation = useConversation({
     onConnect: () => setError(null),
@@ -71,23 +43,12 @@ function VoiceLevelInner({
       setCallEnded(true);
     },
     onError: (err) => console.warn("ElevenLabs error:", err),
-    onMessage: ({ message, source }) => {
-      if (!message) return;
-      const role: "user" | "assistant" = source === "user" ? "user" : "assistant";
-      transcriptRef.current = [
-        ...transcriptRef.current,
-        { role, text: message },
-      ].slice(-20);
-      if (role === "user") fireCoach();
-    },
   });
 
   const startCall = useCallback(async () => {
     setError(null);
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
-      transcriptRef.current = [];
-      setHint(null);
       await conversation.startSession({
         agentId,
         connectionType: "websocket",
@@ -209,12 +170,6 @@ function VoiceLevelInner({
       <p className="text-zinc-500 text-xs mb-6 text-center">
         {level.description}
       </p>
-
-      {conversation.status === "connected" && (
-        <div className="mb-8">
-          <CoachHint hint={hint} color={color} />
-        </div>
-      )}
 
       {conversation.status === "connected" ? (
         <div className="flex flex-col items-center gap-6">

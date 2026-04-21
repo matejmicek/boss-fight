@@ -173,6 +173,21 @@ body {
   box-shadow: 3px 3px 0 #222;
 }
 
+/* Chat bubble fade + rise animation */
+@keyframes bubble-in {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.bubble-in {
+  animation: bubble-in 160ms ease-out both;
+}
+
 /* Subtle scanline overlay for retro feel */
 .scanlines::after {
   content: "";

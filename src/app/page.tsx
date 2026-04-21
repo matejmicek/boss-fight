@@ -7,10 +7,9 @@ import { LevelSelect } from "@/components/level-select";
 import { ChatLevel } from "@/components/chat-level";
 import { VoiceLevel } from "@/components/voice-level";
 import { RunbookLevel } from "@/components/runbook-level";
-import { Leaderboard } from "@/components/leaderboard";
 import { HowToPlay } from "@/components/how-to-play";
 
-type Screen = "level-select" | "playing" | "leaderboard";
+type Screen = "level-select" | "playing";
 
 const HOWTO_FLAG = "boss-fight-seen-howto";
 
@@ -65,15 +64,6 @@ export default function Home() {
       <HowToPlay
         playerName={playerName ?? ""}
         onContinue={handleDismissHowTo}
-      />
-    );
-  }
-
-  if (screen === "leaderboard") {
-    return (
-      <Leaderboard
-        currentPlayerId={playerId}
-        onBack={() => setScreen("level-select")}
       />
     );
   }
@@ -133,7 +123,6 @@ export default function Home() {
         setActiveLevel(level);
         setScreen("playing");
       }}
-      onLeaderboard={() => setScreen("leaderboard")}
       onReset={handleReset}
     />
   );

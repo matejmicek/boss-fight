@@ -9,6 +9,8 @@ export interface Level {
     color?: string;
     system_prompt?: string;
     elevenlabs_agent_id?: string;
+    opener?: string;
+    coach_role?: "analyst" | "partner";
     [key: string]: unknown;
   };
   unlocked: boolean;
@@ -30,4 +32,4 @@ export interface LeaderboardEntry {
   level_scores: { level_id: number; score: number; attempts: number }[];
 }
 
-export const MAX_ATTEMPTS_PER_LEVEL = 2;
+export const MAX_ATTEMPTS_PER_LEVEL = 1;

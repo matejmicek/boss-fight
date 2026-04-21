@@ -15,8 +15,6 @@ import { Level } from "@/lib/types";
 import { getLevelColor } from "@/lib/levels";
 import { createClient } from "@/utils/supabase/client";
 import { CoachHint } from "./coach-hint";
-import { LiveScore } from "./live-score";
-import { ScoreReveal } from "./score-reveal";
 
 export function ChatLevel(props: {
   playerId: string;
@@ -75,6 +73,11 @@ function ChatLevelInner({
 }) {
   const color = getLevelColor(level);
   const systemPrompt = level.config.system_prompt || "";
+  const opener = level.config.opener || "";
+  const coachRole =
+    (level.config.coach_role as string | undefined) === "partner"
+      ? "partner"
+      : "analyst";
 
   const transport = useMemo(
     () =>
@@ -85,13 +88,23 @@ function ChatLevelInner({
     [systemPrompt, level.id, playerId]
   );
 
+  const seededMessages = useMemo<UIMessage[]>(() => {
+    if (initialMessages.length > 0 || !opener) return initialMessages;
+    return [
+      {
+        id: "opener-seed",
+        role: "assistant",
+        parts: [{ type: "text", text: opener }],
+      } as UIMessage,
+    ];
+  }, [initialMessages, opener]);
+
   const runtime = useChatRuntime({
-    messages: initialMessages,
+    messages: seededMessages,
     transport,
   });
 
   const [hint, setHint] = useState<string | null>(null);
-  const [score, setScore] = useState<number | null>(null);
 
   return (
     <AssistantRuntimeProvider runtime={runtime}>
@@ -104,7 +117,6 @@ function ChatLevelInner({
             {level.name.toUpperCase()}
           </div>
           <div className="flex items-center gap-4">
-            <LiveScore score={score} color={color} />
             <a
               href="/deck"
               target="_blank"
@@ -119,7 +131,7 @@ function ChatLevelInner({
           <CoachHint hint={hint} color={color} />
         </div>
 
-        <ConversationWatcher onHint={setHint} onScore={setScore} />
+        <ConversationWatcher coachRole={coachRole} onHint={setHint} />
 
         <div className="flex-1 overflow-hidden">
           <Thread />
@@ -152,36 +164,23 @@ function extractText(msg: AuiMessage): string {
 }
 
 function ConversationWatcher({
+  coachRole,
   onHint,
-  onScore,
 }: {
+  coachRole: "analyst" | "partner";
   onHint: (h: string) => void;
-  onScore: (s: number) => void;
 }) {
   const messages = useAuiState(
     (s) => s.thread.messages as unknown as ReadonlyArray<AuiMessage>
   );
-  const lastProcessedRef = useRef<string | null>(null);
-  const inFlightRef = useRef(false);
+  const isRunning = useAuiState(
+    (s) => (s.thread as unknown as { isRunning?: boolean }).isRunning ?? false
+  );
+  const lastCoachedKeyRef = useRef<string | null>(null);
+  const coachInFlightRef = useRef(false);
 
   useEffect(() => {
-    if (!messages || messages.length === 0) return;
-    let lastUser: AuiMessage | undefined;
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].role === "user") {
-        lastUser = messages[i];
-        break;
-      }
-    }
-    if (!lastUser) return;
-    if (lastUser.id === lastProcessedRef.current) return;
-    if (inFlightRef.current) return;
-
-    const text = extractText(lastUser);
-    if (!text) return;
-
-    lastProcessedRef.current = lastUser.id;
-    inFlightRef.current = true;
+    if (!messages) return;
 
     const transcript = messages
       .filter((m) => m.role === "user" || m.role === "assistant")
@@ -191,36 +190,37 @@ function ConversationWatcher({
       }))
       .filter((t) => t.text);
 
-    const coachReq = fetch("/api/coach", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role: "analyst", transcript }),
-    })
-      .then((r) => r.json())
-      .then((d) => {
-        if (typeof d?.hint === "string") onHint(d.hint);
-      })
-      .catch(() => {
-        /* ignore */
-      });
+    const last = messages[messages.length - 1];
+    const founderTurn = !last || last.role === "assistant";
+    // Don't fire mid-stream: wait for the assistant to finish so the coach
+    // sees the VC's complete question, not a partial prefix.
+    const coachKey =
+      founderTurn && !isRunning ? (last?.id ?? "__opening__") : null;
 
-    const scoreReq = fetch("/api/score", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ transcript }),
-    })
-      .then((r) => r.json())
-      .then((d) => {
-        if (typeof d?.score === "number") onScore(d.score);
+    if (
+      coachKey &&
+      coachKey !== lastCoachedKeyRef.current &&
+      !coachInFlightRef.current
+    ) {
+      lastCoachedKeyRef.current = coachKey;
+      coachInFlightRef.current = true;
+      fetch("/api/coach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: coachRole, transcript }),
       })
-      .catch(() => {
-        /* ignore */
-      });
-
-    Promise.all([coachReq, scoreReq]).finally(() => {
-      inFlightRef.current = false;
-    });
-  }, [messages, onHint, onScore]);
+        .then((r) => r.json())
+        .then((d) => {
+          if (typeof d?.hint === "string") onHint(d.hint);
+        })
+        .catch(() => {
+          /* ignore */
+        })
+        .finally(() => {
+          coachInFlightRef.current = false;
+        });
+    }
+  }, [messages, isRunning, coachRole, onHint]);
 
   return null;
 }
@@ -238,7 +238,7 @@ function ChatLevelFooter({
   onBack: () => void;
   onComplete: (score: number) => void;
 }) {
-  const [completed, setCompleted] = useState<{ score: number } | null>(null);
+  const [completed, setCompleted] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -253,9 +253,9 @@ function ChatLevelFooter({
           filter: `player_id=eq.${playerId}`,
         },
         (payload) => {
-          const row = payload.new as { level_id: number; score: number };
+          const row = payload.new as { level_id: number };
           if (row.level_id === levelId) {
-            setCompleted({ score: row.score });
+            setCompleted(true);
           }
         }
       )
@@ -268,13 +268,26 @@ function ChatLevelFooter({
 
   if (completed) {
     return (
-      <ScoreReveal
-        score={completed.score}
-        onContinue={() => {
-          onComplete(completed.score);
-          onBack();
-        }}
-      />
+      <div className="flex flex-col items-center justify-center p-6 border-t border-zinc-800">
+        <div
+          className="font-pixel text-xl mb-2"
+          style={{ color: "#ffd700" }}
+        >
+          LEVEL COMPLETE
+        </div>
+        <div className="text-zinc-500 text-xs text-center max-w-sm">
+          Final rankings will be revealed at the end of the event.
+        </div>
+        <button
+          onClick={() => {
+            onComplete(0);
+            onBack();
+          }}
+          className="mt-6 px-6 py-3 border-2 border-zinc-700 hover:border-zinc-500 transition-colors text-xs pixel-btn"
+        >
+          CONTINUE
+        </button>
+      </div>
     );
   }
 

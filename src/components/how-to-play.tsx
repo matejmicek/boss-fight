@@ -80,14 +80,9 @@ export function HowToPlay({
               Listen to them.
             </li>
             <li>
-              Your{" "}
-              <span className="text-white font-semibold">total</span> is the sum
-              of your best scores across levels.
-            </li>
-            <li>
-              The{" "}
-              <span className="text-white font-semibold">leaderboard</span>{" "}
-              ranks every player by total. Highest wins.
+              All plays are saved. At the end of the event we reveal the
+              <span className="text-white font-semibold"> final ranking</span>{" "}
+              by judging every team&apos;s transcripts relative to each other.
             </li>
           </ul>
         </Section>

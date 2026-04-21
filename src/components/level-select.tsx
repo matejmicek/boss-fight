@@ -3,7 +3,11 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { Level, MAX_ATTEMPTS_PER_LEVEL } from "@/lib/types";
-import { getLevelColor, LEVEL_TYPE_LABELS } from "@/lib/levels";
+import {
+  getLevelColor,
+  LEVEL_TYPE_LABELS,
+  isPartnerLevel,
+} from "@/lib/levels";
 
 interface MyScores {
   [levelId: number]: { best: number; attempts: number };
@@ -13,14 +17,12 @@ export function LevelSelect({
   playerId,
   playerName,
   onSelect,
-  onLeaderboard,
   onReset,
   pendingLevelId,
 }: {
   playerId: string;
   playerName?: string | null;
   onSelect: (level: Level) => void;
-  onLeaderboard: () => void;
   onReset: () => void;
   pendingLevelId?: number | null;
 }) {
@@ -105,12 +107,6 @@ export function LevelSelect({
             [ DECK ]
           </a>
           <button
-            onClick={onLeaderboard}
-            className="font-pixel text-[10px] text-zinc-500 hover:text-white transition-colors"
-          >
-            [ LEADERBOARD ]
-          </button>
-          <button
             onClick={() => {
               if (
                 window.confirm(
@@ -133,72 +129,154 @@ export function LevelSelect({
       </p>
 
       <div className="space-y-3 max-w-md mx-auto w-full">
-        {levels.map((level) => {
+        {(() => {
+          // Pool attempts + best across all partner routes (voice and text
+          // are two ways into the same boss). Both routes display as "LVL 2"
+          // and are shown adjacent in the list, under the voice route's slot.
+          const partnerLevels = levels.filter((l) => isPartnerLevel(l.name));
+          const partnerIds = partnerLevels.map((l) => l.id);
+          const partnerDisplayId =
+            (partnerLevels.find((l) => l.type === "voice") ?? partnerLevels[0])
+              ?.id ?? null;
+          const partnerPooled = partnerIds.reduce(
+            (acc, id) => {
+              const info = scores[id];
+              if (!info) return acc;
+              return {
+                best: Math.max(acc.best, info.best),
+                attempts: acc.attempts + info.attempts,
+                any: true,
+              };
+            },
+            { best: 0, attempts: 0, any: false }
+          );
+
+          // Put both partner routes together, in the voice route's slot.
+          const ordered = [...levels].sort((a, b) => {
+            const aKey = isPartnerLevel(a.name)
+              ? (partnerDisplayId ?? a.id) * 10 + (a.type === "voice" ? 0 : 1)
+              : a.id * 10;
+            const bKey = isPartnerLevel(b.name)
+              ? (partnerDisplayId ?? b.id) * 10 + (b.type === "voice" ? 0 : 1)
+              : b.id * 10;
+            return aKey - bKey;
+          });
+
+          return ordered.map((level) => {
           const color = getLevelColor(level);
-          const info = scores[level.id];
+          const partnerRoute = isPartnerLevel(level.name);
+          const displayLevelId =
+            partnerRoute && partnerDisplayId !== null
+              ? partnerDisplayId
+              : level.id;
+          const info = partnerRoute
+            ? partnerPooled.any
+              ? {
+                  best: partnerPooled.best,
+                  attempts: partnerPooled.attempts,
+                }
+              : undefined
+            : scores[level.id];
           const attemptsUsed = info?.attempts ?? 0;
-          const noRetries = attemptsUsed >= MAX_ATTEMPTS_PER_LEVEL;
-          const locked = !level.unlocked || noRetries;
+          const completed = attemptsUsed >= MAX_ATTEMPTS_PER_LEVEL;
+          const locked = !level.unlocked || completed;
           const typeLabel = LEVEL_TYPE_LABELS[level.type] || level.type.toUpperCase();
 
           return (
-            <button
-              key={level.id}
-              onClick={() => !locked && onSelect(level)}
-              disabled={locked}
-              className={`w-full p-4 border-2 text-left transition-all bg-zinc-950 ${
-                locked ? "opacity-40 cursor-not-allowed" : "pixel-btn"
-              }`}
-              style={{ borderColor: locked ? "#333" : color + "60" }}
-            >
-              <div className="flex justify-between items-start">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] text-zinc-600">
-                      LVL {level.id}
-                    </span>
-                    <span
-                      className="text-[8px] px-1.5 py-0.5 border"
-                      style={{
-                        color: locked ? "#666" : color,
-                        borderColor: locked ? "#444" : color + "40",
-                      }}
-                    >
-                      {typeLabel}
-                    </span>
-                  </div>
-                  <div
-                    className="font-pixel text-xs"
-                    style={{ color: locked ? "#666" : color }}
-                  >
-                    {!level.unlocked ? "LOCKED" : noRetries ? "NO RETRIES LEFT" : level.name.toUpperCase()}
-                  </div>
-                  {!locked && level.description && (
-                    <div className="text-zinc-500 text-xs italic mt-1">
-                      &quot;{level.description}&quot;
+            <div key={level.id} className="space-y-2">
+              <button
+                onClick={() => !locked && onSelect(level)}
+                disabled={locked}
+                className={`w-full p-4 border-2 text-left transition-all bg-zinc-950 ${
+                  locked ? "opacity-40 cursor-not-allowed" : "pixel-btn"
+                }`}
+                style={{ borderColor: locked ? "#333" : color + "60" }}
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] text-zinc-600">
+                        LVL {displayLevelId}
+                      </span>
+                      <span
+                        className="text-[8px] px-1.5 py-0.5 border"
+                        style={{
+                          color: locked ? "#666" : color,
+                          borderColor: locked ? "#444" : color + "40",
+                        }}
+                      >
+                        {typeLabel}
+                      </span>
                     </div>
-                  )}
-                </div>
-                <div className="text-right text-xs">
-                  {level.unlocked && info ? (
-                    <>
-                      <div style={{ color: "#ffd700" }}>
-                        BEST: {info.best}/10
+                    <div
+                      className="font-pixel text-xs"
+                      style={{ color: locked ? "#666" : color }}
+                    >
+                      {!level.unlocked
+                        ? "LOCKED"
+                        : completed
+                        ? "COMPLETED"
+                        : level.name.toUpperCase()}
+                    </div>
+                    {!locked && level.description && (
+                      <div className="text-zinc-500 text-xs italic mt-1">
+                        &quot;{level.description}&quot;
                       </div>
-                      <div className="text-zinc-600 text-[10px] mt-1">
-                        {attemptsUsed}/{MAX_ATTEMPTS_PER_LEVEL} TRIES
-                      </div>
-                    </>
-                  ) : level.unlocked && pendingLevelId === level.id ? (
-                    <div className="text-yellow-500 animate-pulse">PENDING...</div>
-                  ) : level.unlocked ? (
-                    <div className="text-zinc-600">---</div>
-                  ) : null}
+                    )}
+                  </div>
+                  <div className="text-right text-xs">
+                    {level.unlocked && info ? (
+                      <>
+                        {level.id === 1 || partnerRoute ? (
+                          <div className="text-zinc-500 text-[10px]">DONE</div>
+                        ) : (
+                          <div style={{ color: "#ffd700" }}>
+                            BEST: {info.best}/10
+                          </div>
+                        )}
+                        <div className="text-zinc-600 text-[10px] mt-1">
+                          {attemptsUsed}/{MAX_ATTEMPTS_PER_LEVEL} TRIES
+                        </div>
+                      </>
+                    ) : level.unlocked && pendingLevelId === level.id ? (
+                      <div className="text-yellow-500 animate-pulse">PENDING...</div>
+                    ) : level.unlocked ? (
+                      <div className="text-zinc-600">---</div>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            </button>
+              </button>
+              {level.unlocked && completed && (
+                <div className="flex justify-end">
+                  <button
+                    onClick={async () => {
+                      if (
+                        !window.confirm(
+                          "Delete this attempt and retry? The conversation will be erased."
+                        )
+                      ) {
+                        return;
+                      }
+                      const res = await fetch(
+                        `/api/scores/attempt?playerId=${encodeURIComponent(
+                          playerId
+                        )}&levelId=${level.id}`,
+                        { method: "DELETE" }
+                      );
+                      if (res.ok) {
+                        await fetchScores();
+                      }
+                    }}
+                    className="font-pixel text-[10px] text-zinc-500 hover:text-red-400 transition-colors"
+                  >
+                    [ DELETE ATTEMPT & RETRY ]
+                  </button>
+                </div>
+              )}
+            </div>
           );
-        })}
+        });
+        })()}
       </div>
     </div>
   );

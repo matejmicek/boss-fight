@@ -3,6 +3,8 @@ import { convertToModelMessages, streamText, type UIMessage } from "ai";
 import { z } from "zod";
 import { createClient } from "@/utils/supabase/server";
 import { renderAnalystPreread } from "@/lib/deck";
+import { MAX_ATTEMPTS_PER_LEVEL } from "@/lib/types";
+import { PARTNER_LEVEL_NAMES } from "@/lib/levels";
 
 export async function POST(req: Request) {
   const { messages, system, levelId, playerId } = await req.json();
@@ -51,33 +53,52 @@ export async function POST(req: Request) {
     tools: {
       end_level: {
         description:
-          "Call this when the conversation is over. Score 0 if the founder failed. Score 1-10 based on how excited you are.",
+          "Call this when the conversation is over. This marks the conversation complete — it does NOT produce a score. All scoring happens at the end of the event via batch evaluation against every other founder's transcript. You do not grade the founder.",
         inputSchema: z.object({
-          score: z
-            .number()
-            .int()
-            .min(0)
-            .max(10)
-            .describe("0 = failed, 1-10 = excitement level"),
           justification: z
             .string()
-            .describe("Brief explanation of your score"),
+            .describe(
+              "One-line internal note on the outcome (e.g. 'Forwarded to Marcus' or 'Passed — no real numbers'). Ignored for scoring."
+            ),
         }),
-        execute: async ({ score, justification }) => {
+        execute: async ({ justification }) => {
+          // Partner has two routes (voice + text). Attempts pool across both.
+          const { data: thisLevel } = await supabase
+            .from("levels")
+            .select("name")
+            .eq("id", levelId)
+            .maybeSingle();
+          const inPartnerGroup =
+            thisLevel?.name != null &&
+            PARTNER_LEVEL_NAMES.has(thisLevel.name);
+          let attemptLevelIds: number[] = [levelId];
+          if (inPartnerGroup) {
+            const { data: partnerRows } = await supabase
+              .from("levels")
+              .select("id")
+              .in("name", [...PARTNER_LEVEL_NAMES]);
+            attemptLevelIds = (partnerRows ?? []).map(
+              (l: { id: number }) => l.id
+            );
+            if (attemptLevelIds.length === 0) attemptLevelIds = [levelId];
+          }
+
           const { count } = await supabase
             .from("scores")
             .select("id", { count: "exact", head: true })
             .eq("player_id", playerId)
-            .eq("level_id", levelId);
+            .in("level_id", attemptLevelIds);
 
-          if (count !== null && count >= 2) {
+          if (count !== null && count >= MAX_ATTEMPTS_PER_LEVEL) {
             return { completed: false, error: "No attempts remaining" };
           }
 
+          // Participation marker. Score value is a sentinel — the batch
+          // evaluator ranks players from their full transcripts, not this row.
           await supabase.from("scores").insert({
             player_id: playerId,
             level_id: levelId,
-            score,
+            score: 0,
             justification,
           });
 
@@ -91,7 +112,7 @@ export async function POST(req: Request) {
               .eq("id", conversationId);
           }
 
-          return { completed: true, score };
+          return { completed: true };
         },
       },
     },

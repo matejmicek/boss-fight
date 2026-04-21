@@ -5,25 +5,30 @@ const BRAND = "#6fdb6f";
 function SlideFrame({
   title,
   children,
-  index,
-  total,
+  isFirst,
+  isLast,
 }: {
   title?: string;
   children: React.ReactNode;
-  index: number;
-  total: number;
+  isFirst?: boolean;
+  isLast?: boolean;
 }) {
   return (
-    <section className="min-h-screen flex flex-col justify-center px-6 py-12 max-w-lg mx-auto">
+    <section className="min-h-screen flex flex-col justify-center px-6 py-12 max-w-lg mx-auto border-b border-zinc-900 last:border-b-0">
       {title && (
         <h2 className="text-2xl font-bold mb-8" style={{ color: BRAND }}>
           {title}
         </h2>
       )}
       {children}
-      <div className="text-zinc-700 text-xs text-center mt-12">
-        {index + 1} / {total}
-      </div>
+      {isFirst && (
+        <div className="text-zinc-600 text-xs text-center mt-12 animate-pulse">
+          scroll ↓
+        </div>
+      )}
+      {isLast && (
+        <div className="text-zinc-700 text-xs text-center mt-12">end</div>
+      )}
     </section>
   );
 }
@@ -113,12 +118,36 @@ export default function DeckPage() {
         </ul>
       ),
     },
+    {
+      title: "The Ask",
+      body: (
+        <div className="space-y-6 text-zinc-300 text-base leading-relaxed">
+          <div className="text-center p-6 border border-zinc-800 rounded">
+            <div className="text-4xl font-bold" style={{ color: BRAND }}>
+              $2M
+            </div>
+            <div className="text-zinc-500 text-sm mt-2">
+              seed round
+            </div>
+          </div>
+          <p className="text-zinc-400 text-sm">
+            18 months of runway to get to 50K weekly active cooks, ship Android,
+            and prove the feed loop compounds beyond founding-user cohorts.
+          </p>
+        </div>
+      ),
+    },
   ];
 
   return (
     <div className="min-h-screen bg-black text-white">
       {slides.map((s, i) => (
-        <SlideFrame key={i} title={s.title} index={i} total={slides.length}>
+        <SlideFrame
+          key={i}
+          title={s.title}
+          isFirst={i === 0}
+          isLast={i === slides.length - 1}
+        >
           {s.body}
         </SlideFrame>
       ))}

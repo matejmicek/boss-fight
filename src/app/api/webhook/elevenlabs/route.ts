@@ -47,18 +47,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, skipped: "too_short" });
   }
 
-  const evalScore = data?.analysis?.data_collection_results?.["Eval Score"];
-  const score = evalScore?.value ?? 0;
-  const justification = evalScore?.rationale ?? data?.analysis?.transcript_summary ?? null;
-
-  if (score === null || score === undefined) {
-    return NextResponse.json({ ok: true }); // No score, skip
-  }
+  // We no longer score during the call — batch evaluator at end of event
+  // handles all scoring from transcripts. Record a participation marker so
+  // the evaluator knows this player completed Level 2.
+  const justification =
+    (data?.analysis?.data_collection_results?.["Eval Score"] as {
+      rationale?: string;
+    })?.rationale ??
+    data?.analysis?.transcript_summary ??
+    null;
 
   const { error } = await supabase.from("scores").insert({
     player_id: playerId,
     level_id: levelId,
-    score: Math.min(10, Math.max(0, Math.round(Number(score)))),
+    score: 0,
     justification: typeof justification === "string" ? justification : null,
   });
 
