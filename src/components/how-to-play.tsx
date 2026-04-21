@@ -65,24 +65,34 @@ export function HowToPlay({
         <Section title="SCORING">
           <ul className="space-y-2">
             <li>
-              <span className="text-white font-semibold">2 retries per level.</span>{" "}
-              Only your best attempt counts.
+              <span className="text-white font-semibold">One shot per level.</span>{" "}
+              No retries — make it count.
             </li>
             <li>
-              Each conversation is scored{" "}
-              <span className="text-white font-semibold">0 - 10</span> by the VC
-              who just talked to you.
+              <span className="text-white font-semibold">No in-chat scoring.</span>{" "}
+              The VCs don&apos;t grade you in the moment. All scoring happens
+              at the end, across every team&apos;s full transcripts.
             </li>
             <li>
               A silent{" "}
               <span className="text-white font-semibold">coach</span> watches
-              each conversation and drops a 2-3 word hint above the chat.
+              each conversation and drops a short hint above the chat.
               Listen to them.
             </li>
             <li>
               All plays are saved. At the end of the event we reveal the
               <span className="text-white font-semibold"> final ranking</span>{" "}
               by judging every team&apos;s transcripts relative to each other.
+              See{" "}
+              <a
+                href="/prompts"
+                target="_blank"
+                rel="noreferrer"
+                className="text-white underline underline-offset-2"
+              >
+                /prompts
+              </a>{" "}
+              for the exact criteria.
             </li>
           </ul>
         </Section>
